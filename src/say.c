@@ -30,6 +30,7 @@
  */
 #include "say.h"
 #include "fiber.h"
+#include "cfg.h"
 
 #include <errno.h>
 #include <stdarg.h>
@@ -456,14 +457,13 @@ log_syslog_init(struct log *log, const char *init_str)
  * Initialize logging subsystem to use in daemon mode.
  */
 int
-log_create(struct log *log, const char *init_str, bool nonblock)
+log_create(struct log *log, const char *init_str, int nonblock)
 {
 	log->pid = 0;
 	log->syslog_ident = NULL;
 	log->path = NULL;
 	log->format_func = NULL;
 	log->level = S_INFO;
-	log->nonblock = nonblock;
 	setvbuf(stderr, NULL, _IONBF, 0);
 
 	if (init_str != NULL) {
@@ -475,13 +475,16 @@ log_create(struct log *log, const char *init_str, bool nonblock)
 		int rc;
 		switch (type) {
 		case SAY_LOGGER_PIPE:
+			log->nonblock = (nonblock >= 0)? nonblock: true;
 			rc = log_pipe_init(log, init_str);
 			break;
 		case SAY_LOGGER_SYSLOG:
+			log->nonblock = (nonblock >= 0)? nonblock: true;
 			rc = log_syslog_init(log, init_str);
 			break;
 		case SAY_LOGGER_FILE:
 		default:
+			log->nonblock = (nonblock >= 0)? nonblock: false;
 			rc = log_file_init(log, init_str);
 			break;
 		}
