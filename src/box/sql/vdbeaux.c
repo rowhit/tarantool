@@ -581,7 +581,6 @@ opIterNext(VdbeOpIter * p)
  *
  *   *  OP_Halt with P1=SQLITE_CONSTRAINT and P2=ON_CONFLICT_ACTION_ABORT.
  *   *  OP_HaltIfNull with P1=SQLITE_CONSTRAINT and P2=ON_CONFLICT_ACTION_ABORT.
- *   *  OP_Destroy
  *   *  OP_FkCounter with P2==0 (immediate foreign key constraint)
  *
  * Then check that the value of Parse.mayAbort is true if an
@@ -603,10 +602,9 @@ sqlite3VdbeAssertMayAbort(Vdbe * v, int mayAbort)
 
 	while ((pOp = opIterNext(&sIter)) != 0) {
 		int opcode = pOp->opcode;
-		if (opcode == OP_Destroy ||
-		    ((opcode == OP_Halt || opcode == OP_HaltIfNull)
+		if ((opcode == OP_Halt || opcode == OP_HaltIfNull)
 			&& ((pOp->p1 & 0xff) == SQLITE_CONSTRAINT
-			    && pOp->p2 == ON_CONFLICT_ACTION_ABORT))
+			    && pOp->p2 == ON_CONFLICT_ACTION_ABORT)
 		    ) {
 			hasAbort = 1;
 			break;
