@@ -40,6 +40,8 @@ sqlite3ClearCursor(BtCursor * pCur)
 {
 	sqlite3_free(pCur->key);
 	pCur->key = 0;
+	pCur->iter = NULL;
+	pCur->last_tuple = NULL;
 	pCur->eState = CURSOR_INVALID;
 }
 
