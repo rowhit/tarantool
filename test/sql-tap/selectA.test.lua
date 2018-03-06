@@ -2449,6 +2449,12 @@ test:do_execsql_test(
 
 local function strip_rnd(explain)
     for i, val in ipairs(explain) do
+	if type(i) == 'cdata' then
+            i = 0
+        end
+        if type(val) == 'cdata' then
+            val = 0
+        end
         explain[i] = string.gsub(val, "sqlite_sq_[0123456789ABCDEF]*", "sqlite_sq")
     end
     return explain

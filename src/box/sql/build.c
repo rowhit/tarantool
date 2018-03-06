@@ -48,6 +48,7 @@
 #include "tarantoolInt.h"
 #include "box/session.h"
 #include "box/identifier.h"
+#include "box/schema.h"
 
 /*
  * This routine is called after a single SQL statement has been
@@ -2706,7 +2707,9 @@ sqlite3RefillIndex(Parse * pParse, Index * pIndex, int memRootPage)
 	sqlite3VdbeJumpHere(v, addr1);
 	if (memRootPage < 0)
 		sqlite3VdbeAddOp2(v, OP_Clear, tnum, 0);
-	sqlite3VdbeAddOp4(v, OP_OpenWrite, iIdx, tnum, 0,
+	struct space *space = space_by_id(SQLITE_PAGENO_TO_SPACEID(tnum));
+	assert(space != NULL);
+	sqlite3VdbeAddOp4(v, OP_OpenWrite, iIdx, tnum, (int64_t) space,
 			  (char *)pKey, P4_KEYINFO);
 	sqlite3VdbeChangeP5(v,
 			    OPFLAG_BULKCSR | ((memRootPage >= 0) ?

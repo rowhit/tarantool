@@ -66,6 +66,7 @@ sqlite3VdbeCreate(Parse * pParse)
 	p->magic = VDBE_MAGIC_INIT;
 	p->pParse = pParse;
 	p->autoCommit = (char)box_txn() == 0 ? 1 : 0;
+	p->schema_ver = box_schema_version();
 	if (!p->autoCommit) {
 		p->psql_txn = in_txn()->psql_txn;
 		p->nDeferredCons = p->psql_txn->nDeferredConsSave;
@@ -209,7 +210,7 @@ test_addop_breakpoint(void)
  * operand.
  */
 static SQLITE_NOINLINE int
-growOp3(Vdbe * p, int op, int p1, int p2, int p3)
+growOp3(Vdbe * p, int op, int p1, int p2, int64_t p3)
 {
 	assert(p->pParse->nOpAlloc <= p->nOp);
 	if (growOpArray(p, 1))
@@ -219,7 +220,7 @@ growOp3(Vdbe * p, int op, int p1, int p2, int p3)
 }
 
 int
-sqlite3VdbeAddOp3(Vdbe * p, int op, int p1, int p2, int p3)
+sqlite3VdbeAddOp3(Vdbe * p, int op, int p1, int p2, int64_t p3)
 {
 	int i;
 	VdbeOp *pOp;
@@ -342,7 +343,7 @@ sqlite3VdbeAddOp4(Vdbe * p,	/* Add the opcode to this VM */
 		  int op,	/* The new opcode */
 		  int p1,	/* The P1 operand */
 		  int p2,	/* The P2 operand */
-		  int p3,	/* The P3 operand */
+		  int64_t p3,	/* The P3 operand */
 		  const char *zP4,	/* The P4 operand */
 		  int p4type)	/* P4 operand type */
 
@@ -361,7 +362,7 @@ sqlite3VdbeAddOp4Dup8(Vdbe * p,	/* Add the opcode to this VM */
 		      int op,	/* The new opcode */
 		      int p1,	/* The P1 operand */
 		      int p2,	/* The P2 operand */
-		      int p3,	/* The P3 operand */
+		      int64_t p3,	/* The P3 operand */
 		      const u8 * zP4,	/* The P4 operand */
 		      int p4type	/* P4 operand type */
     )
@@ -401,7 +402,7 @@ sqlite3VdbeAddOp4Int(Vdbe * p,	/* Add the opcode to this VM */
 		     int op,	/* The new opcode */
 		     int p1,	/* The P1 operand */
 		     int p2,	/* The P2 operand */
-		     int p3,	/* The P3 operand */
+		     int64_t p3,	/* The P3 operand */
 		     int p4)	/* The P4 operand as an integer */
 {
 	int addr = sqlite3VdbeAddOp3(p, op, p1, p2, p3);

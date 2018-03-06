@@ -3292,7 +3292,11 @@ case OP_OpenWrite:
 
 	assert(p2 >= 1);
 	pBtCur = pCur->uc.pCursor;
-	pBtCur->space = space_by_id(SQLITE_PAGENO_TO_SPACEID(p2));
+	if (box_schema_version() == p->schema_ver) {
+		pBtCur->space = (struct space *) pOp->p3;
+	} else {
+		pBtCur->space = space_by_id(SQLITE_PAGENO_TO_SPACEID(p2));
+	}
 	pBtCur->index = space_index(pBtCur->space, SQLITE_PAGENO_TO_INDEXID(p2));
 	assert(pBtCur->space != NULL && pBtCur->index != NULL);
 	pBtCur->eState = CURSOR_INVALID;

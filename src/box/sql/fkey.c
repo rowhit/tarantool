@@ -35,7 +35,9 @@
  */
 #include <box/coll.h>
 #include "sqliteInt.h"
+#include "tarantoolInt.h"
 #include "box/session.h"
+#include "box/schema.h"
 
 #ifndef SQLITE_OMIT_FOREIGN_KEY
 #ifndef SQLITE_OMIT_TRIGGER
@@ -434,7 +436,11 @@ fkLookupParent(Parse * pParse,	/* Parse context */
 			int regTemp = sqlite3GetTempRange(pParse, nCol);
 			int regRec = sqlite3GetTempReg(pParse);
 
-			sqlite3VdbeAddOp2(v, OP_OpenRead, iCur, pIdx->tnum);
+			struct space *space =
+				space_by_id(SQLITE_PAGENO_TO_SPACEID(pIdx->tnum));
+			assert(space != NULL);
+			sqlite3VdbeAddOp3(v, OP_OpenRead, iCur, pIdx->tnum,
+					  (int64_t) space);
 			sqlite3VdbeSetP4KeyInfo(pParse, pIdx);
 			for (i = 0; i < nCol; i++) {
 				sqlite3VdbeAddOp2(v, OP_Copy,

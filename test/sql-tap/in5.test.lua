@@ -95,8 +95,7 @@ test:do_test(
     function()
         local nEph = 0
         for _, op in ipairs(test:execsql("EXPLAIN SELECT d FROM t2 WHERE a IN t1x AND b IN t1y AND c IN t1z")) do
-            if (string.find(op, "OpenEphemeral"))
-            then
+            if type(op) == 'string' and string.find(op, "OpenEphemeral") then
                 nEph = nEph + 1
             end
         end
@@ -162,8 +161,7 @@ test:do_test(
     function()
         local nEph = 0
         for _, op in ipairs(test:execsql("EXPLAIN SELECT d FROM t2 WHERE a IN t1x AND b IN t1y AND c IN t1z")) do
-            if (string.find(op, "OpenEphemeral"))
-            then
+            if type(op) == 'string' and string.find(op, "OpenEphemeral") then
                 nEph = nEph + 1
             end
         end
@@ -202,8 +200,7 @@ test:do_test(
     function()
         local nEph = 0
         for _, op in ipairs(test:execsql("EXPLAIN SELECT d FROM t2 WHERE a IN t1x AND b IN t1y AND c IN t1z")) do
-            if (string.find(op, "OpenEphemeral"))
-            then
+            if type(op) == 'string' and string.find(op, "OpenEphemeral") then
                 nEph = nEph + 1
             end
         end
@@ -242,8 +239,7 @@ test:do_test(
     function()
         local nEph = 0
         for _, op in ipairs(test:execsql("EXPLAIN SELECT d FROM t2 WHERE a IN t1x AND b IN t1y AND c IN t1z")) do
-            if (string.find(op, "OpenEphemeral"))
-            then
+            if type(op) == 'string' and string.find(op, "OpenEphemeral") then
                 nEph = nEph + 1
             end
         end

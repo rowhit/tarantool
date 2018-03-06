@@ -193,7 +193,7 @@ struct VdbeFrame {
 struct Mem {
 	union MemValue {
 		double r;	/* Real value used when MEM_Real is set in flags */
-		i64 i;		/* Integer value used when MEM_Int is set in flags */
+		int64_t i;		/* Integer value used when MEM_Int is set in flags */
 		bool b;         /* Boolean value used when MEM_Bool is set in flags */
 		int nZero;	/* Used when bit MEM_Zero is set in flags */
 		FuncDef *pDef;	/* Used only when flags==MEM_Agg */
@@ -378,6 +378,7 @@ struct Vdbe {
 	i64 nFkConstraint;	/* Number of imm. FK constraints this VM */
 	i64 nStmtDefCons;	/* Number of def. constraints when stmt started */
 	i64 nStmtDefImmCons;	/* Number of def. imm constraints when stmt started */
+	uint32_t schema_ver;	/* Schema version at the moment of VDBE creation. */
 
 	/*
 	 * In recursive triggers we can execute INSERT/UPDATE OR IGNORE

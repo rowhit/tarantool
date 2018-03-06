@@ -65,7 +65,7 @@ struct VdbeOp {
 	u16 p5;			/* Fifth parameter is an unsigned character */
 	int p1;			/* First operand */
 	int p2;			/* Second parameter (often the jump destination) */
-	int p3;			/* The third parameter */
+	int64_t p3;		/* The third parameter */
 	union p4union {		/* fourth parameter */
 		int i;		/* Integer value if p4type==P4_INT32 */
 		void *p;	/* Generic pointer */
@@ -146,6 +146,7 @@ typedef struct VdbeOpList VdbeOpList;
 #define P4_INDEX    (-16)	/* P4 is a pointer to a Index structure */
 #define P4_FUNCCTX  (-17)	/* P4 is a pointer to an sqlite3_context object */
 #define P4_BOOL     (-18)	/* P4 is a bool value */
+#define P4_SPACE    (-19)	/* P4 is a pointer to struct space */
 
 
 /* Error message codes for OP_Halt */
@@ -198,10 +199,10 @@ int sqlite3VdbeAddOp2(Vdbe *, int, int, int);
 int sqlite3VdbeGoto(Vdbe *, int);
 int sqlite3VdbeLoadString(Vdbe *, int, const char *);
 void sqlite3VdbeMultiLoad(Vdbe *, int, const char *, ...);
-int sqlite3VdbeAddOp3(Vdbe *, int, int, int, int);
-int sqlite3VdbeAddOp4(Vdbe *, int, int, int, int, const char *zP4, int);
-int sqlite3VdbeAddOp4Dup8(Vdbe *, int, int, int, int, const u8 *, int);
-int sqlite3VdbeAddOp4Int(Vdbe *, int, int, int, int, int);
+int sqlite3VdbeAddOp3(Vdbe *, int, int, int, int64_t);
+int sqlite3VdbeAddOp4(Vdbe *, int, int, int, int64_t, const char *zP4, int);
+int sqlite3VdbeAddOp4Dup8(Vdbe *, int, int, int, int64_t, const u8 *, int);
+int sqlite3VdbeAddOp4Int(Vdbe *, int, int, int, int64_t, int);
 void sqlite3VdbeEndCoroutine(Vdbe *, int);
 #if defined(SQLITE_DEBUG) && !defined(SQLITE_TEST_REALLOC_STRESS)
 void sqlite3VdbeVerifyNoMallocRequired(Vdbe * p, int N);

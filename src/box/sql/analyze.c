@@ -174,10 +174,13 @@ openStatTable(Parse * pParse,	/* Parsing context */
 
 	/* Open the sql_stat[134] tables for writing. */
 	for (i = 0; aTable[i]; i++) {
+		struct space *space =
+			space_by_id(SQLITE_PAGENO_TO_SPACEID(aRoot[i]));
+		assert(space != NULL);
 		int addr;
 		addr =
 		    sqlite3VdbeAddOp3(v, OP_OpenWrite, iStatCur + i, aRoot[i],
-				      0);
+				      (int64_t) space);
 		v->aOp[addr].p4.pKeyInfo = 0;
 		v->aOp[addr].p4type = P4_KEYINFO;
 		sqlite3VdbeChangeP5(v, aCreateTbl[i]);
@@ -910,7 +913,11 @@ analyzeOneTable(Parse * pParse,	/* Parser context */
 
 		/* Open a read-only cursor on the index being analyzed. */
 		assert(sqlite3SchemaToIndex(db, pIdx->pSchema) == 0);
-		sqlite3VdbeAddOp2(v, OP_OpenRead, iIdxCur, pIdx->tnum);
+		struct space *space =
+			space_by_id(SQLITE_PAGENO_TO_SPACEID(pIdx->tnum));
+		assert(space != NULL);
+		sqlite3VdbeAddOp3(v, OP_OpenRead, iIdxCur, pIdx->tnum,
+				  (int64_t)space);
 		sqlite3VdbeSetP4KeyInfo(pParse, pIdx);
 		VdbeComment((v, "%s", pIdx->zName));
 

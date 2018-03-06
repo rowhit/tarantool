@@ -45,8 +45,10 @@ local function exec_neph(sql)
     local res = test:execsql('EXPLAIN '..sql)
     local cnt = 0
     for _, v in ipairs(res) do
-        if string.find(v, 'OpenTEphemeral') then
-            cnt = cnt + 1
+	if type(v) == 'string' then
+            if string.find(v, 'OpenTEphemeral') then
+                cnt = cnt + 1
+            end
         end
     end
     res = test:execsql(sql)
