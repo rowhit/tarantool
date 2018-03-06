@@ -42,6 +42,12 @@
 #define TARANTOOL_LIBEXT "so"
 #endif
 
+#cmakedefine HAVE_GETLINE_DECL
+#ifndef HAVE_GETLINE_DECL
+#include <stdio.h>
+extern ssize_t getline(char **lineptr, size_t *n, FILE *stream);
+#endif
+
 /**
  * Defined if cpuid() instruction is available.
  */

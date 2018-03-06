@@ -127,6 +127,24 @@ check_library_exists("" __libc_stack_end "" HAVE_LIBC_STACK_END)
 check_function_exists(setproctitle HAVE_SETPROCTITLE)
 check_function_exists(setprogname HAVE_SETPROGNAME)
 check_function_exists(getprogname HAVE_GETPROGNAME)
+check_function_exists(getline HAVE_GETLINE)
+if (HAVE_GETLINE)
+    set(CMAKE_REQUIRED_FLAGS "-Werror")
+    check_c_source_compiles("
+        #include <stdio.h>
+        int main(void)
+        {
+            FILE *fp = NULL;
+            char *line = NULL;
+            size_t len = 0;
+            getline(&line, &len, fp);
+            return 0;
+        }
+        " HAVE_GETLINE_DECL)
+    set(CMAKE_REQUIRED_FLAGS "")
+else ()
+    message(FATAL_ERROR "getline is not provided by libraries on the system")
+endif ()
 
 #
 # Enable 'make tags' target.
