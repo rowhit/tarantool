@@ -103,7 +103,16 @@ key_def_dup(const struct key_def *src)
 		return NULL;
 	}
 	memcpy(res, src, sz);
+	res->refs = 1;
 	return res;
+}
+
+void
+key_def_unref(struct key_def *key_def)
+{
+	assert(key_def->refs > 0);
+	if (--key_def->refs == 0)
+		free(key_def);
 }
 
 static void
@@ -125,6 +134,7 @@ key_def_new(uint32_t part_count)
 		diag_set(OutOfMemory, sz, "malloc", "struct key_def");
 		return NULL;
 	}
+	key_def->refs = 1;
 	key_def->part_count = part_count;
 	key_def->unique_part_count = part_count;
 	return key_def;
@@ -145,7 +155,7 @@ key_def_new_with_parts(struct key_part_def *parts, uint32_t part_count)
 			if (coll == NULL) {
 				diag_set(ClientError, ER_WRONG_INDEX_OPTIONS,
 					 i + 1, "collation was not found by ID");
-				free(def);
+				key_def_unref(def);
 				return NULL;
 			}
 		}
@@ -187,7 +197,8 @@ box_key_def_new(uint32_t *fields, uint32_t *types, uint32_t part_count)
 void
 box_key_def_delete(box_key_def_t *key_def)
 {
-	free(key_def);
+	assert(key_def->refs == 1);
+	key_def_unref(key_def);
 }
 
 int
@@ -546,6 +557,7 @@ key_def_merge(const struct key_def *first, const struct key_def *second)
 			 "new_def");
 		return NULL;
 	}
+	new_def->refs = 1;
 	new_def->part_count = new_part_count;
 	new_def->unique_part_count = new_part_count;
 	new_def->is_nullable = first->is_nullable || second->is_nullable;

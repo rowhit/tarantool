@@ -135,6 +135,8 @@ struct key_def {
 	uint64_t column_mask;
 	/** The size of the 'parts' array. */
 	uint32_t part_count;
+	/** Reference counter. */
+	int refs;
 	/** Description of parts of a multipart index. */
 	struct key_part parts[];
 };
@@ -148,6 +150,15 @@ struct key_def {
  */
 struct key_def *
 key_def_dup(const struct key_def *src);
+
+static inline void
+key_def_ref(struct key_def *key_def)
+{
+	++key_def->refs;
+}
+
+void
+key_def_unref(struct key_def *key_def);
 
 /** \cond public */
 
