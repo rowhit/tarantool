@@ -1,6 +1,7 @@
 #!/usr/bin/env tarantool
 test = require("sqltester")
-test:plan(19)
+test:plan(16)
+
 
 -- This file implements regression tests for foreign keys.
 
@@ -208,36 +209,36 @@ test:do_execsql_test(
         -- </fkey1-5.6>
     })
 
-test:do_execsql_test(
-    "fkey1-6.1",
-    [[
-        CREATE TABLE p1(id PRIMARY KEY, x, y);
-        CREATE UNIQUE INDEX p1x ON p1(x) WHERE y<2;
-        INSERT INTO p1 VALUES(1, 1, 1);
-        CREATE TABLE c1(a PRIMARY KEY REFERENCES p1(x));
-    ]], {
-        -- <fkey1-6.1>
-        -- </fkey1-6.1>
-    })
+--test:do_execsql_test(
+--    "fkey1-6.1",
+--    [[
+--        CREATE TABLE p1(id PRIMARY KEY, x, y);
+--        CREATE UNIQUE INDEX p1x ON p1(x) WHERE y<2;
+--        INSERT INTO p1 VALUES(1, 1, 1);
+--        CREATE TABLE c1(a PRIMARY KEY REFERENCES p1(x));
+--    ]], {
+--        -- <fkey1-6.1>
+--        -- </fkey1-6.1>
+--    })
 
-test:do_catchsql_test(
-    "fkey1-6.2",
-    [[
-        INSERT INTO c1 VALUES(1);
-    ]], {
-        -- <fkey1-6.2>
-        1, "foreign key mismatch - \"C1\" referencing \"P1\""
-        -- </fkey1-6.2>
-    })
+--test:do_catchsql_test(
+--    "fkey1-6.2",
+--    [[
+--        INSERT INTO c1 VALUES(1);
+--    ]], {
+--        -- <fkey1-6.2>
+--        1, "foreign key mismatch - \"C1\" referencing \"P1\""
+--        -- </fkey1-6.2>
+--    })
 
-test:do_execsql_test(
-    "fkey1-6.3",
-    [[
-        CREATE UNIQUE INDEX p1x2 ON p1(x);
-        INSERT INTO c1 VALUES(1);
-    ]], {
-        -- <fkey1-6.3>
-        -- </fkey1-6.3>
-    })
+--test:do_execsql_test(
+--    "fkey1-6.3",
+--    [[
+--        CREATE UNIQUE INDEX p1x2 ON p1(x);
+--        INSERT INTO c1 VALUES(1);
+--    ]], {
+--        -- <fkey1-6.3>
+--        -- </fkey1-6.3>
+--    })
 
 test:finish_test()

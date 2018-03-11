@@ -1,6 +1,7 @@
 #!/usr/bin/env tarantool
 test = require("sqltester")
-test:plan(14)
+test:plan(0)
+
 
 --!./tcltestrunner.lua
 -- 2013-07-31
@@ -220,34 +221,34 @@ test:plan(14)
 -- 2014-04-13: Partial index causes assertion fault on UPDATE OR REPLACE.
 --
 -- MUST_WORK_TEST #2311 partial index
-if 0>0 then
-test:do_execsql_test(
-    "index6-6.0",
-    [[
-        CREATE TABLE t6(a,b, PRIMARY KEY (a,b));
-        CREATE INDEX t6b ON t6(b) WHERE b=1;
-        INSERT INTO t6(a,b) VALUES(123,456);
-        SELECT * FROM t6;
-    ]], {
-        -- <index6-6.0>
-        123, 456
-        -- </index6-6.0>
-    })
-else
-    test:execsql("CREATE TABLE t6(a,b, PRIMARY KEY (a,b));")
-    test:execsql("INSERT INTO t6(a,b) VALUES(123,456);")
-end
+--if 0>0 then
+--test:do_execsql_test(
+--    "index6-6.0",
+--    [[
+--        CREATE TABLE t6(a,b, PRIMARY KEY (a,b));
+--        CREATE INDEX t6b ON t6(b) WHERE b=1;
+--        INSERT INTO t6(a,b) VALUES(123,456);
+--        SELECT * FROM t6;
+--    ]], {
+--        -- <index6-6.0>
+--        123, 456
+--        -- </index6-6.0>
+--    })
+--else
+--    test:execsql("CREATE TABLE t6(a,b, PRIMARY KEY (a,b));")
+--    test:execsql("INSERT INTO t6(a,b) VALUES(123,456);")
+--end
 
-test:do_execsql_test(
-    "index6-6.1",
-    [[
-        UPDATE OR REPLACE t6 SET b=789;
-        SELECT * FROM t6;
-    ]], {
-        -- <index6-6.1>
-        123, 789
-        -- </index6-6.1>
-    })
+--test:do_execsql_test(
+--    "index6-6.1",
+--    [[
+--        UPDATE OR REPLACE t6 SET b=789;
+--        SELECT * FROM t6;
+--    ]], {
+--        -- <index6-6.1>
+--        123, 789
+--        -- </index6-6.1>
+--    })
 
 -- do_execsql_test index6-6.2 {
 -- } {ok}
@@ -256,212 +257,212 @@ test:do_execsql_test(
 -- the ON clause of a LEFT JOIN was causing incorrect results for all
 -- versions of SQLite 3.8.0 through 3.8.8.
 --
-test:do_execsql_test(
-    "index6-7.0",
-    [[
-        CREATE TABLE t7a(id primary key, x);
-        CREATE TABLE t7b(id primary key, y);
-        INSERT INTO t7a VALUES(1, 1);
-        CREATE INDEX t7ax ON t7a(x) WHERE x=99;
-        SELECT x,y FROM t7a LEFT JOIN t7b ON (x=99) ORDER BY x;
-    ]], {
-        -- <index6-7.0>
-        1, ""
-        -- </index6-7.0>
-    })
+--test:do_execsql_test(
+--    "index6-7.0",
+--    [[
+--        CREATE TABLE t7a(id primary key, x);
+--        CREATE TABLE t7b(id primary key, y);
+--        INSERT INTO t7a VALUES(1, 1);
+--        CREATE INDEX t7ax ON t7a(x) WHERE x=99;
+--        SELECT x,y FROM t7a LEFT JOIN t7b ON (x=99) ORDER BY x;
+--    ]], {
+--        -- <index6-7.0>
+--        1, ""
+--        -- </index6-7.0>
+--    })
 
-test:do_execsql_test(
-    "index6-7.1",
-    [[
-        INSERT INTO t7b VALUES(1, 2);
-        SELECT x,y FROM t7a JOIN t7b ON (x=99) ORDER BY x;
-    ]], {
-        -- <index6-7.1>
-        
-        -- </index6-7.1>
-    })
+--test:do_execsql_test(
+--    "index6-7.1",
+--    [[
+--        INSERT INTO t7b VALUES(1, 2);
+--        SELECT x,y FROM t7a JOIN t7b ON (x=99) ORDER BY x;
+--    ]], {
+--        -- <index6-7.1>
+--
+--        -- </index6-7.1>
+--    })
 
-test:do_execsql_test(
-    "index6-7.2",
-    [[
-        INSERT INTO t7a VALUES(2, 99);
-        SELECT x,y FROM t7a LEFT JOIN t7b ON (x=99) ORDER BY x;
-    ]], {
-        -- <index6-7.2>
-        1, "", 99, 2
-        -- </index6-7.2>
-    })
+--test:do_execsql_test(
+--    "index6-7.2",
+--    [[
+--        INSERT INTO t7a VALUES(2, 99);
+--        SELECT x,y FROM t7a LEFT JOIN t7b ON (x=99) ORDER BY x;
+--    ]], {
+--        -- <index6-7.2>
+--        1, "", 99, 2
+--        -- </index6-7.2>
+--    })
 
-test:do_execsql_test(
-    "index6-7.3",
-    [[
-        SELECT x,y FROM t7a JOIN t7b ON (x=99) ORDER BY x;
-    ]], {
-        -- <index6-7.3>
-        99, 2
-        -- </index6-7.3>
-    })
+--test:do_execsql_test(
+--    "index6-7.3",
+--    [[
+--        SELECT x,y FROM t7a JOIN t7b ON (x=99) ORDER BY x;
+--    ]], {
+--        -- <index6-7.3>
+--        99, 2
+--        -- </index6-7.3>
+--    })
 
-test:do_execsql_test(
-    "index6-7.4",
-    [[
-        EXPLAIN QUERY PLAN
-        SELECT x,y FROM t7a JOIN t7b ON (x=99) ORDER BY x;
-    ]], {
-        -- <index6-7.4>
-        "/USING COVERING INDEX T7AX/"
-        -- </index6-7.4>
-    })
+--test:do_execsql_test(
+--    "index6-7.4",
+--    [[
+--        EXPLAIN QUERY PLAN
+--        SELECT x,y FROM t7a JOIN t7b ON (x=99) ORDER BY x;
+--    ]], {
+--        -- <index6-7.4>
+--        "/USING COVERING INDEX T7AX/"
+--        -- </index6-7.4>
+--    })
 
-test:do_execsql_test(
-    "index6-8.0",
-    [[
-        CREATE TABLE t8a(id primary key, a,b);
-        CREATE TABLE t8b(id primary key, x,y);
-        CREATE INDEX i8c ON t8b(y) WHERE x = 'value';
+--test:do_execsql_test(
+--   "index6-8.0",
+--    [[
+--        CREATE TABLE t8a(id primary key, a,b);
+--        CREATE TABLE t8b(id primary key, x,y);
+--        CREATE INDEX i8c ON t8b(y) WHERE x = 'value';
+--
+--        INSERT INTO t8a VALUES(1, 1, 'one');
+--        INSERT INTO t8a VALUES(2, 2, 'two');
+--        INSERT INTO t8a VALUES(3, 3, 'three');
+--
+--        INSERT INTO t8b VALUES(1, 'value', 1);
+--        INSERT INTO t8b VALUES(2, 'dummy', 2);
+--        INSERT INTO t8b VALUES(3, 'value', 3);
+--        INSERT INTO t8b VALUES(4, 'dummy', 4);
+--    ]], {
+--        -- <index6-8.0>
+--        
+--        -- </index6-8.0>
+--    })
 
-        INSERT INTO t8a VALUES(1, 1, 'one');
-        INSERT INTO t8a VALUES(2, 2, 'two');
-        INSERT INTO t8a VALUES(3, 3, 'three');
+--test:do_eqp_test(
+--    "index6-8.1",
+--    [[
+--        SELECT * FROM t8a LEFT JOIN t8b ON (x = 'value' AND y = a)
+--    ]], {
+--        -- <index6-8.1>
+--    {0, 0, 0, "SCAN TABLE T8A"},
+--    {0, 1, 1, "SEARCH TABLE T8B USING COVERING INDEX I8C (Y=?)"}
+--        -- </index6-8.1>
+--    })
 
-        INSERT INTO t8b VALUES(1, 'value', 1);
-        INSERT INTO t8b VALUES(2, 'dummy', 2);
-        INSERT INTO t8b VALUES(3, 'value', 3);
-        INSERT INTO t8b VALUES(4, 'dummy', 4);
-    ]], {
-        -- <index6-8.0>
-        
-        -- </index6-8.0>
-    })
-
-test:do_eqp_test(
-    "index6-8.1",
-    [[
-        SELECT * FROM t8a LEFT JOIN t8b ON (x = 'value' AND y = a)
-    ]], {
-        -- <index6-8.1>
-    {0, 0, 0, "SCAN TABLE T8A"},
-    {0, 1, 1, "SEARCH TABLE T8B USING COVERING INDEX I8C (Y=?)"}
-        -- </index6-8.1>
-    })
-
-test:do_execsql_test(
-    "index6-8.2",
-    [[
-        SELECT a,b,x,y FROM t8a LEFT JOIN t8b ON (x = 'value' AND y = a)
-    ]], {
-        -- <index6-8.2>
-        1, "one", "value", 1, 2, "two", "", "", 3, "three", "value", 3
-        -- </index6-8.2>
-    })
+--test:do_execsql_test(
+--    "index6-8.2",
+--    [[
+--        SELECT a,b,x,y FROM t8a LEFT JOIN t8b ON (x = 'value' AND y = a)
+--    ]], {
+--        -- <index6-8.2>
+--        1, "one", "value", 1, 2, "two", "", "", 3, "three", "value", 3
+--        -- </index6-8.2>
+--    })
 
 -- MUST_WORK_TEST
-if (0 > 0)
- then
-    -- 2015-06-11.  Assertion fault found by AFL
-    --
-    test:do_execsql_test(
-        "index6-9.1",
-        [[
-            CREATE TABLE t9(a int, b int, c int);
-            CREATE INDEX t9ca ON t9(c,a) WHERE a in (10,12,20);
-            INSERT INTO t9 VALUES(1,1,9),(10,2,35),(11,15,82),(20,19,5),(NULL,7,3);
-            UPDATE t9 SET b=c WHERE a in (10,12,20);
-            SELECT a,b,c,'|' FROM t9 ORDER BY a;
-        ]], {
-            -- <index6-9.1>
-            "", 7, 3, "|", 1, 1, 9, "|", 10, 35, 35, "|", 11, 15, 82, "|", 20, 5, 5, "|"
-            -- </index6-9.1>
-        })
+--if (0 > 0)
+-- then
+--    -- 2015-06-11.  Assertion fault found by AFL
+--    --
+--    test:do_execsql_test(
+--        "index6-9.1",
+--        [[
+--            CREATE TABLE t9(a int, b int, c int);
+--            CREATE INDEX t9ca ON t9(c,a) WHERE a in (10,12,20);
+--            INSERT INTO t9 VALUES(1,1,9),(10,2,35),(11,15,82),(20,19,5),(NULL,7,3);
+--            UPDATE t9 SET b=c WHERE a in (10,12,20);
+--            SELECT a,b,c,'|' FROM t9 ORDER BY a;
+--        ]], {
+--            -- <index6-9.1>
+--            "", 7, 3, "|", 1, 1, 9, "|", 10, 35, 35, "|", 11, 15, 82, "|", 20, 5, 5, "|"
+--            -- </index6-9.1>
+--        })
 
-test:do_execsql_test(
-    "index6-9.2",
-    [[
-        --DROP TABLE t9;
-        CREATE TABLE t9(a int, b int, c int, PRIMARY KEY(a));
-        CREATE INDEX t9ca ON t9(c,a) WHERE a in (10,12,20);
-        INSERT INTO t9 VALUES(1,1,9),(10,2,35),(11,15,82),(20,19,5);
-        UPDATE t9 SET b=c WHERE a in (10,12,20);
-        SELECT a,b,c,'|' FROM t9 ORDER BY a;
-    ]], {
-        -- <index6-9.2>
-        1, 1, 9, "|", 10, 35, 35, "|", 11, 15, 82, "|", 20, 5, 5, "|"
-        -- </index6-9.2>
-    })
-end
+--test:do_execsql_test(
+--    "index6-9.2",
+--    [[
+--        --DROP TABLE t9;
+--        CREATE TABLE t9(a int, b int, c int, PRIMARY KEY(a));
+--        CREATE INDEX t9ca ON t9(c,a) WHERE a in (10,12,20);
+--        INSERT INTO t9 VALUES(1,1,9),(10,2,35),(11,15,82),(20,19,5);
+--        UPDATE t9 SET b=c WHERE a in (10,12,20);
+--        SELECT a,b,c,'|' FROM t9 ORDER BY a;
+--    ]], {
+--        -- <index6-9.2>
+--        1, 1, 9, "|", 10, 35, 35, "|", 11, 15, 82, "|", 20, 5, 5, "|"
+--        -- </index6-9.2>
+--    })
+--end
 -- AND-connected terms in the WHERE clause of a partial index
 --
-test:do_execsql_test(
-    "index6-10.1",
-    [[
-        CREATE TABLE t10(a,b,c,d,e INTEGER PRIMARY KEY);
-        INSERT INTO t10 VALUES
-          (1,2,3,4,5),
-          (2,3,4,5,6),
-          (3,4,5,6,7),
-          (1,2,3,8,9);
-        CREATE INDEX t10x ON t10(d) WHERE a=1 AND b=2 AND c=3;
-        SELECT e FROM t10 WHERE a=1 AND b=2 AND c=3 ORDER BY d;
-    ]], {
-        -- <index6-10.1>
-        5, 9
-        -- </index6-10.1>
-    })
+--test:do_execsql_test(
+--    "index6-10.1",
+--    [[
+--        CREATE TABLE t10(a,b,c,d,e INTEGER PRIMARY KEY);
+--        INSERT INTO t10 VALUES
+--          (1,2,3,4,5),
+--          (2,3,4,5,6),
+--          (3,4,5,6,7),
+--          (1,2,3,8,9);
+--        CREATE INDEX t10x ON t10(d) WHERE a=1 AND b=2 AND c=3;
+--        SELECT e FROM t10 WHERE a=1 AND b=2 AND c=3 ORDER BY d;
+--    ]], {
+--        -- <index6-10.1>
+--        5, 9
+--        -- </index6-10.1>
+--    })
 
-test:do_execsql_test(
-    "index6-10.1eqp",
-    [[
-        EXPLAIN QUERY PLAN
-        SELECT e FROM t10 WHERE a=1 AND b=2 AND c=3 ORDER BY d;
-    ]], {
-        -- <index6-10.1eqp>
-        "/USING COVERING INDEX T10X/"
-        -- </index6-10.1eqp>
-    })
+--test:do_execsql_test(
+--    "index6-10.1eqp",
+--    [[
+--        EXPLAIN QUERY PLAN
+--        SELECT e FROM t10 WHERE a=1 AND b=2 AND c=3 ORDER BY d;
+--    ]], {
+--        -- <index6-10.1eqp>
+--        "/USING COVERING INDEX T10X/"
+--        -- </index6-10.1eqp>
+--    })
 
-test:do_execsql_test(
-    "index6-10.2",
-    [[
-        SELECT e FROM t10 WHERE c=3 AND 2=b AND a=1 ORDER BY d DESC;
-    ]], {
-        -- <index6-10.2>
-        9, 5
-        -- </index6-10.2>
-    })
+--test:do_execsql_test(
+--    "index6-10.2",
+--    [[
+--        SELECT e FROM t10 WHERE c=3 AND 2=b AND a=1 ORDER BY d DESC;
+--    ]], {
+--        -- <index6-10.2>
+--       9, 5
+--        -- </index6-10.2>
+--    })
 
-test:do_execsql_test(
-    "index6-10.2eqp",
-    [[
-        EXPLAIN QUERY PLAN
-        SELECT e FROM t10 WHERE c=3 AND 2=b AND a=1 ORDER BY d DESC;
-    ]], {
-        -- <index6-10.2eqp>
-        "/USING COVERING INDEX T10X/"
-        -- </index6-10.2eqp>
-    })
+--test:do_execsql_test(
+--    "index6-10.2eqp",
+--    [[
+--        EXPLAIN QUERY PLAN
+--        SELECT e FROM t10 WHERE c=3 AND 2=b AND a=1 ORDER BY d DESC;
+--    ]], {
+--        -- <index6-10.2eqp>
+--        "/USING COVERING INDEX T10X/"
+--        -- </index6-10.2eqp>
+--    })
 
-test:do_execsql_test(
-    "index6-10.3",
-    [[
-        SELECT e FROM t10 WHERE a=1 AND b=2 ORDER BY d DESC;
-    ]], {
-        -- <index6-10.3>
-        9, 5
-        -- </index6-10.3>
-    })
+--test:do_execsql_test(
+--    "index6-10.3",
+--    [[
+--        SELECT e FROM t10 WHERE a=1 AND b=2 ORDER BY d DESC;
+--    ]], {
+--        -- <index6-10.3>
+--        9, 5
+--        -- </index6-10.3>
+--    })
 
 -- MUST_WORK_TEST why did plan change?
-if 0>0 then
-test:do_execsql_test(
-    "index6-10.3eqp",
-    [[
-        EXPLAIN QUERY PLAN
-        SELECT e FROM t10 WHERE a=1 AND b=2 ORDER BY d DESC;
-    ]], {
-        -- <index6-10.3eqp>
-        "~/USING", "INDEX", "t10x/"
-        -- </index6-10.3eqp>
-    })
-end
-
+--if 0>0 then
+--test:do_execsql_test(
+--    "index6-10.3eqp",
+--    [[
+--        EXPLAIN QUERY PLAN
+--        SELECT e FROM t10 WHERE a=1 AND b=2 ORDER BY d DESC;
+--    ]], {
+--        -- <index6-10.3eqp>
+--        "~/USING", "INDEX", "t10x/"
+--        -- </index6-10.3eqp>
+--    })
+--end
+--garbej test
 test:finish_test()

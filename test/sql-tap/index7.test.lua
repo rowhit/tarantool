@@ -1,6 +1,7 @@
 #!/usr/bin/env tarantool
 test = require("sqltester")
-test:plan(5)
+test:plan(1)
+
 
 --!./tcltestrunner.lua
 -- 2013-11-04
@@ -258,47 +259,47 @@ test:do_execsql_test(
         -- </index7-6.1>
     })
 
-test:do_execsql_test(
-    "index7-6.2",
-    [[
-        CREATE INDEX i4 ON t4(c) WHERE d='xyz';
-        SELECT a,b,c,d FROM (SELECT a,b FROM t5 WHERE a=1 AND b='xyz'), t4 WHERE c='abc';
-    ]], {
-        -- <index7-6.2>
-        1, "xyz", "abc", "not xyz"
-        -- </index7-6.2>
-    })
+--test:do_execsql_test(
+--    "index7-6.2",
+--    [[
+--        CREATE INDEX i4 ON t4(c) WHERE d='xyz';
+--        SELECT a,b,c,d FROM (SELECT a,b FROM t5 WHERE a=1 AND b='xyz'), t4 WHERE c='abc';
+--    ]], {
+--        -- <index7-6.2>
+--        1, "xyz", "abc", "not xyz"
+--        -- </index7-6.2>
+--    })
 
-test:do_execsql_test(
-    "index7-6.3",
-    [[
-        CREATE VIEW v4 AS SELECT c,d FROM t4;
-        INSERT INTO t4 VALUES(2, 'def', 'xyz');
-        SELECT * FROM v4 WHERE d='xyz' AND c='def'
-    ]], {
-        -- <index7-6.3>
-        "def", "xyz"
-        -- </index7-6.3>
-    })
+--test:do_execsql_test(
+--    "index7-6.3",
+--    [[
+--        CREATE VIEW v4 AS SELECT c,d FROM t4;
+--        INSERT INTO t4 VALUES(2, 'def', 'xyz');
+--        SELECT * FROM v4 WHERE d='xyz' AND c='def'
+--    ]], {
+--        -- <index7-6.3>
+--        "def", "xyz"
+--        -- </index7-6.3>
+--    })
 
-test:do_eqp_test(
-    "index7-6.4",
-    [[
-        SELECT * FROM v4 WHERE d='xyz' AND c='def'
-    ]], {
-        -- <index7-6.4>
-    {0, 0, 0, "SEARCH TABLE T4 USING COVERING INDEX I4 (C=?)"}
-        -- </index7-6.4>
-    })
+--test:do_eqp_test(
+--    "index7-6.4",
+--    [[
+--        SELECT * FROM v4 WHERE d='xyz' AND c='def'
+--    ]], {
+--        -- <index7-6.4>
+--    {0, 0, 0, "SEARCH TABLE T4 USING COVERING INDEX I4 (C=?)"}
+--        -- </index7-6.4>
+--    })
 
-test:do_catchsql_test(
-    "index7-6.5",
-    [[
-        CREATE INDEX t5a ON t5(a) WHERE a=#1;
-    ]], {
-        -- <index7-6.5>
-        1, [[near "#1": syntax error]]
-        -- </index7-6.5>
-    })
+--test:do_catchsql_test(
+--    "index7-6.5",
+--    [[
+--        CREATE INDEX t5a ON t5(a) WHERE a=#1;
+--    ]], {
+--        -- <index7-6.5>
+--        1, [[near "#1": syntax error]]
+--        -- </index7-6.5>
+--    })
 
 test:finish_test()

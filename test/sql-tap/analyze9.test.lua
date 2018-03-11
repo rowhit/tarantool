@@ -1,6 +1,6 @@
 #!/usr/bin/env tarantool
 test = require("sqltester")
-test:plan(124)
+test:plan(118)
 
 testprefix = "analyze9"
 
@@ -1105,82 +1105,82 @@ test:do_execsql_test(
 ---------------------------------------------------------------------------
 -- Test that stat4 data may be used with partial indexes.
 --
-test:do_test(
-    17.1,
-    function()
-        test:execsql([[
-            DROP TABLE IF EXISTS t1;
-            CREATE TABLE t1(id INTEGER PRIMARY KEY AUTOINCREMENT, a, b, c, d);
-            CREATE INDEX i1 ON t1(a, b) WHERE d IS NOT NULL;
-            INSERT INTO t1 VALUES(null, -1, -1, -1, NULL);
-            INSERT INTO t1 SELECT null, 2*a,2*b,2*c,d FROM t1;
-            INSERT INTO t1 SELECT null, 2*a,2*b,2*c,d FROM t1;
-            INSERT INTO t1 SELECT null, 2*a,2*b,2*c,d FROM t1;
-            INSERT INTO t1 SELECT null, 2*a,2*b,2*c,d FROM t1;
-            INSERT INTO t1 SELECT null, 2*a,2*b,2*c,d FROM t1;
-            INSERT INTO t1 SELECT null, 2*a,2*b,2*c,d FROM t1;
-        ]])
-        local b = 0
-        for i = 0, 31 do
-            if (i < 8) then
-                b = 0
-            else
-                b = i
-        end
-        test:execsql(string.format(" INSERT INTO t1 VALUES(null, %s%%2, %s, %s/2, 'abc') ", i, b, i))
-    end
-    return test:execsql("ANALYZE")
-    end, {
-        -- <17.1>
-        -- </17.1>
-    })
+--test:do_test(
+--    17.1,
+--    function()
+--        test:execsql([[
+--            DROP TABLE IF EXISTS t1;
+--            CREATE TABLE t1(id INTEGER PRIMARY KEY AUTOINCREMENT, a, b, c, d);
+--            CREATE INDEX i1 ON t1(a, b) WHERE d IS NOT NULL;
+--            INSERT INTO t1 VALUES(null, -1, -1, -1, NULL);
+--            INSERT INTO t1 SELECT null, 2*a,2*b,2*c,d FROM t1;
+--            INSERT INTO t1 SELECT null, 2*a,2*b,2*c,d FROM t1;
+--            INSERT INTO t1 SELECT null, 2*a,2*b,2*c,d FROM t1;
+--            INSERT INTO t1 SELECT null, 2*a,2*b,2*c,d FROM t1;
+--            INSERT INTO t1 SELECT null, 2*a,2*b,2*c,d FROM t1;
+--            INSERT INTO t1 SELECT null, 2*a,2*b,2*c,d FROM t1;
+--        ]])
+--        local b = 0
+--        for i = 0, 31 do
+--            if (i < 8) then
+--                b = 0
+--            else
+--                b = i
+--        end
+--        test:execsql(string.format(" INSERT INTO t1 VALUES(null, %s%%2, %s, %s/2, 'abc') ", i, b, i))
+--    end
+--    return test:execsql("ANALYZE")
+--    end, {
+--        -- <17.1>
+--        -- </17.1>
+--    })
 
-test:do_execsql_test(
-    17.2,
-    [[
-        EXPLAIN QUERY PLAN SELECT * FROM t1 WHERE d IS NOT NULL AND a=0 AND b=10 AND c=10;
-    ]], {
-        -- <17.2>
-        0, 0, 0, 'SEARCH TABLE T1 USING COVERING INDEX I1 (A=? AND B=?)'
-        -- </17.2>
-    })
+--test:do_execsql_test(
+--    17.2,
+--    [[
+--        EXPLAIN QUERY PLAN SELECT * FROM t1 WHERE d IS NOT NULL AND a=0 AND b=10 AND c=10;
+--    ]], {
+--        -- <17.2>
+--        0, 0, 0, 'SEARCH TABLE T1 USING COVERING INDEX I1 (A=? AND B=?)'
+--        -- </17.2>
+--    })
 
-test:do_execsql_test(
-    17.3,
-    [[
-        EXPLAIN QUERY PLAN SELECT * FROM t1 WHERE d IS NOT NULL AND a=0 AND b=0 AND c=10;
-    ]], {
-        -- <17.3>
-        0, 0, 0, "SEARCH TABLE T1 USING COVERING INDEX I1 (A=? AND B=?)"
-        -- </17.3>
-    })
+--test:do_execsql_test(
+--    17.3,
+--    [[
+--        EXPLAIN QUERY PLAN SELECT * FROM t1 WHERE d IS NOT NULL AND a=0 AND b=0 AND c=10;
+--    ]], {
+--        -- <17.3>
+--        0, 0, 0, "SEARCH TABLE T1 USING COVERING INDEX I1 (A=? AND B=?)"
+--        -- </17.3>
+--    })
 
-test:do_execsql_test(
-    17.4,
-    [[
-        CREATE INDEX i2 ON t1(c, d);
-        ANALYZE;
-    ]])
+--test:do_execsql_test(
+--    17.4,
+--    [[
+--        CREATE INDEX i2 ON t1(c, d);
+--        ANALYZE;
+--    ]])
 
-test:do_execsql_test(
-    17.5,
-    [[
-        EXPLAIN QUERY PLAN SELECT * FROM t1 WHERE d IS NOT NULL AND a=0 AND b=10 AND c=10;
-    ]], {
-        -- <17.5>
-        0, 0, 0, "SEARCH TABLE T1 USING COVERING INDEX I2 (C=? AND D>?)"
-        -- </17.5>
-    })
+--test:do_execsql_test(
+--    17.5,
+--    [[
+--        EXPLAIN QUERY PLAN SELECT * FROM t1 WHERE d IS NOT NULL AND a=0 AND b=10 AND c=10;
+--    ]], {
+--        -- <17.5>
+--        0, 0, 0, "SEARCH TABLE T1 USING COVERING INDEX I2 (C=? AND D>?)"
+--        -- </17.5>
+--    })
 
-test:do_execsql_test(
-    17.6,
-    [[
-        EXPLAIN QUERY PLAN SELECT * FROM t1 WHERE d IS NOT NULL AND a=0 AND b=0 AND c=10;
-    ]], {
-        -- <17.6>
-        0, 0, 0, "SEARCH TABLE T1 USING COVERING INDEX I2 (C=? AND D>?)"
-        -- </17.6>
-    })
+--test:do_execsql_test(
+--   17.6,
+--    [[
+--        EXPLAIN QUERY PLAN SELECT * FROM t1 WHERE d IS NOT NULL AND a=0 AND b=0 AND c=10;
+--    ]], {
+--        -- <17.6>
+--        0, 0, 0, "SEARCH TABLE T1 USING COVERING INDEX I2 (C=? AND D>?)"
+--        -- </17.6>
+--    })
 
 ---------------------------------------------------------------------------
 

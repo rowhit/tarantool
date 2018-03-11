@@ -1,6 +1,6 @@
 #!/usr/bin/env tarantool
 test = require("sqltester")
-test:plan(7)
+test:plan(6)
 
 --!./tcltestrunner.lua
 -- 2014-10-24
@@ -108,22 +108,22 @@ test:do_execsql_test(
         -- </autoindex4-3.0>
     })
 
-test:do_execsql_test(
-    "autoindex4-3.1",
-    [[
-        CREATE INDEX Items_x1 ON Items(ItemName,Name) WHERE ItemName = 'dummy';
-
-        SELECT Items.ItemName
-          FROM Items
-            LEFT JOIN A ON (A.Name = Items.ItemName and Items.ItemName = 'dummy')
-            LEFT JOIN B ON (B.Name = Items.ItemName)
-          WHERE Items.Name = 'Parent'
-          ORDER BY Items.ItemName;
-    ]], {
-        -- <autoindex4-3.1>
-        "Item1", "Item2"
-        -- </autoindex4-3.1>
-    })
+--test:do_execsql_test(
+--    "autoindex4-3.1",
+--    [[
+--        CREATE INDEX Items_x1 ON Items(ItemName,Name) WHERE ItemName = 'dummy';
+--
+--        SELECT Items.ItemName
+--         FROM Items
+--            LEFT JOIN A ON (A.Name = Items.ItemName and Items.ItemName = 'dummy')
+--            LEFT JOIN B ON (B.Name = Items.ItemName)
+--          WHERE Items.Name = 'Parent'
+--          ORDER BY Items.ItemName;
+--    ]], {
+--        -- <autoindex4-3.1>
+--        "Item1", "Item2"
+--        -- </autoindex4-3.1>
+--    })
 
 test:finish_test()
 

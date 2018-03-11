@@ -1237,7 +1237,8 @@ paren_exprlist(A) ::= LP exprlist(X) RP.  {A = X;}
 //
 cmd ::= createkw(S) uniqueflag(U) INDEX ifnotexists(NE) nm(X)
         ON nm(Y) LP sortlist(Z) RP where_opt(W). {
-  sqlite3CreateIndex(pParse, &X, 
+  assert(W == NULL);
+  sqlite3CreateIndex(pParse, &X,
                      sqlite3SrcListAppend(pParse->db,0,&Y), Z, U,
                       &S, W, SQLITE_SO_ASC, NE, SQLITE_IDXTYPE_APPDEF);
 }

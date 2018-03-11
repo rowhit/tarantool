@@ -76,7 +76,7 @@ sqlite3FinishCoding(Parse * pParse)
 		return;
 	}
 
-	/* Begin by generating some termination code at the end of the
+	/* Begin by generating some termination code at the end of the 
 	 * vdbe program
 	 */
 	v = sqlite3GetVdbe(pParse);
@@ -1031,8 +1031,8 @@ sqlite3AddPrimaryKey(Parse * pParse,	/* Parsing context */
 		sqlite3ErrorMsg(pParse, "AUTOINCREMENT is only allowed on an "
 				"INTEGER PRIMARY KEY or INT PRIMARY KEY");
 	} else {
-		sqlite3CreateIndex(pParse, 0, 0, pList, onError, 0,
-				   0, sortOrder, 0, SQLITE_IDXTYPE_PRIMARYKEY);
+		sqlite3CreateIndex(pParse, 0, 0, pList, onError, 0, 0,
+				   sortOrder, 0, SQLITE_IDXTYPE_PRIMARYKEY);
 		pList = 0;
 	}
 
@@ -2961,12 +2961,10 @@ sqlite3CreateIndex(Parse * pParse,	/* All information about this parse */
 	/* Tarantool have access to each column by any index */
 	pIndex->isCovering = 1;
 	if (pPIWhere) {
-		sqlite3ResolveSelfReference(pParse, pTab, NC_PartIdx, pPIWhere,
-					    0);
+		sqlite3ResolveSelfReference(pParse, pTab, NC_PartIdx, pPIWhere,0);
 		pIndex->pPartIdxWhere = pPIWhere;
 		pPIWhere = 0;
 	}
-
 	/* Analyze the list of expressions that form the terms of the index and
 	 * report any errors.  In the common case where the expression is exactly
 	 * a table column, store that column in aiColumn[].  For general expressions,
@@ -3207,7 +3205,6 @@ sqlite3CreateIndex(Parse * pParse,	/* All information about this parse */
  exit_create_index:
 	if (pIndex)
 		freeIndex(db, pIndex);
-	sqlite3ExprDelete(db, pPIWhere);
 	sqlite3ExprListDelete(db, pList);
 	sqlite3SrcListDelete(db, pTblName);
 	sqlite3DbFree(db, zName);
