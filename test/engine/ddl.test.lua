@@ -141,8 +141,8 @@ s:drop()
 -- gh-3229: update optionality if a space format is changed too,
 -- not only when indexes are updated.
 --
-box.cfg{}
-s = box.schema.create_space('test', {engine = 'memtx'})
+utils = require('utils')
+s = box.schema.create_space('test', {engine = engine})
 format = {}
 format[1] = {'field1', 'unsigned'}
 format[2] = {'field2', 'unsigned', is_nullable = true}
@@ -151,7 +151,16 @@ s:format(format)
 pk = s:create_index('pk')
 sk = s:create_index('sk', {parts = {{2, 'unsigned', is_nullable = true}}})
 s:replace{2, 3, 4}
+s:replace{100, 200, 300}
+s:replace{300, 400, 500}
+s:replace{400, 500, 600}
+-- Do snapshot for Vinyl to test run_iterator local key_def is
+-- valid after alter().
+box.snapshot()
+iter = utils.create_iterator(pk)
+iter.next()
 s:format({})
+iter.iterate_over()
 s:insert({1})
 s:insert({4, 5})
 s:insert({3, 4})

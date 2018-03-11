@@ -215,9 +215,9 @@ struct vy_run_iterator {
 
 	/* Members needed for memory allocation and disk access */
 	/** Index key definition used for storing statements on disk. */
-	const struct key_def *cmp_def;
+	struct key_def *cmp_def;
 	/** Index key definition defined by the user. */
-	const struct key_def *key_def;
+	struct key_def *key_def;
 	/**
 	 * Format ot allocate REPLACE and DELETE tuples read from
 	 * pages.
@@ -492,8 +492,7 @@ vy_run_iterator_open(struct vy_run_iterator *itr,
 		     struct vy_run_iterator_stat *stat,
 		     struct vy_slice *slice, enum iterator_type iterator_type,
 		     const struct tuple *key, const struct vy_read_view **rv,
-		     const struct key_def *cmp_def,
-		     const struct key_def *key_def,
+		     struct key_def *cmp_def, struct key_def *key_def,
 		     struct tuple_format *format,
 		     struct tuple_format *upsert_format,
 		     bool is_primary);
@@ -551,7 +550,7 @@ struct vy_slice_stream {
 	 * Key def for comparing with slice boundaries,
 	 * includes secondary key parts.
 	 */
-	const struct key_def *cmp_def;
+	struct key_def *cmp_def;
 	/** Format for allocating REPLACE and DELETE tuples read from pages. */
 	struct tuple_format *format;
 	/** Same as format, but for UPSERT tuples. */
@@ -565,7 +564,7 @@ struct vy_slice_stream {
  */
 void
 vy_slice_stream_open(struct vy_slice_stream *stream, struct vy_slice *slice,
-		     const struct key_def *cmp_def, struct tuple_format *format,
+		     struct key_def *cmp_def, struct tuple_format *format,
 		     struct tuple_format *upsert_format, bool is_primary);
 
 /**

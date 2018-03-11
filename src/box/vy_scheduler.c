@@ -108,6 +108,13 @@ struct vy_task {
 	int status;
 	/** If ->execute fails, the error is stored here. */
 	struct diag diag;
+	/**
+	 * Saved key definitions. Orignal index->key/cmp_def can
+	 * be changed when the task is started but not finished,
+	 * for example, on alter.
+	 */
+	struct key_def *key_def;
+	struct key_def *cmp_def;
 	/** Index this task is for. */
 	struct vy_index *index;
 	/** Range to compact. */
@@ -164,6 +171,10 @@ vy_task_new(struct mempool *pool, struct vy_index *index,
 	memset(task, 0, sizeof(*task));
 	task->ops = ops;
 	task->index = index;
+	task->key_def = index->key_def;
+	key_def_ref(task->key_def);
+	task->cmp_def = index->cmp_def;
+	key_def_ref(task->cmp_def);
 	vy_index_ref(index);
 	diag_create(&task->diag);
 	return task;
@@ -174,6 +185,8 @@ static void
 vy_task_delete(struct mempool *pool, struct vy_task *task)
 {
 	vy_index_unref(task->index);
+	key_def_unref(task->key_def);
+	key_def_unref(task->cmp_def);
 	diag_destroy(&task->diag);
 	TRASH(task);
 	mempool_free(pool, task);
@@ -638,7 +651,7 @@ vy_task_write_run(struct vy_scheduler *scheduler, struct vy_task *task)
 	struct vy_run_writer writer;
 	if (vy_run_writer_create(&writer, task->new_run, index->env->path,
 				 index->space_id, index->id,
-				 index->cmp_def, index->key_def,
+				 task->cmp_def, task->key_def,
 				 task->page_size, task->bloom_fpr,
 				 task->max_output_count) != 0)
 		goto fail;
@@ -989,7 +1002,7 @@ vy_task_dump_new(struct vy_scheduler *scheduler, struct vy_index *index,
 
 	struct vy_stmt_stream *wi;
 	bool is_last_level = (index->run_count == 0);
-	wi = vy_write_iterator_new(index->cmp_def, index->disk_format,
+	wi = vy_write_iterator_new(task->cmp_def, index->disk_format,
 				   index->upsert_format, index->id == 0,
 				   is_last_level, scheduler->read_views);
 	if (wi == NULL)
@@ -1264,7 +1277,7 @@ vy_task_compact_new(struct vy_scheduler *scheduler, struct vy_index *index,
 
 	struct vy_stmt_stream *wi;
 	bool is_last_level = (range->compact_priority == range->slice_count);
-	wi = vy_write_iterator_new(index->cmp_def, index->disk_format,
+	wi = vy_write_iterator_new(task->cmp_def, index->disk_format,
 				   index->upsert_format, index->id == 0,
 				   is_last_level, scheduler->read_views);
 	if (wi == NULL)

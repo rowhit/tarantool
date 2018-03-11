@@ -157,16 +157,12 @@ vy_index_new(struct vy_index_env *index_env, struct vy_cache_env *cache_env,
 		goto fail_tree;
 	}
 
-	struct key_def *key_def = key_def_dup(index_def->key_def);
-	if (key_def == NULL)
-		goto fail_key_def;
-
-	struct key_def *cmp_def = key_def_dup(index_def->cmp_def);
-	if (cmp_def == NULL)
-		goto fail_cmp_def;
-
+	struct key_def *key_def = index_def->key_def;
+	struct key_def *cmp_def = index_def->cmp_def;
 	index->cmp_def = cmp_def;
+	key_def_ref(cmp_def);
 	index->key_def = key_def;
+	key_def_ref(key_def);
 	if (index_def->iid == 0) {
 		/*
 		 * Disk tuples can be returned to an user from a
@@ -258,9 +254,7 @@ fail_upsert_format:
 	tuple_format_unref(index->disk_format);
 fail_format:
 	key_def_unref(cmp_def);
-fail_cmp_def:
 	key_def_unref(key_def);
-fail_key_def:
 	free(index->tree);
 fail_tree:
 	free(index);

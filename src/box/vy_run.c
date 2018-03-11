@@ -1405,15 +1405,16 @@ vy_run_iterator_open(struct vy_run_iterator *itr,
 		     struct vy_run_iterator_stat *stat,
 		     struct vy_slice *slice, enum iterator_type iterator_type,
 		     const struct tuple *key, const struct vy_read_view **rv,
-		     const struct key_def *cmp_def,
-		     const struct key_def *key_def,
+		     struct key_def *cmp_def, struct key_def *key_def,
 		     struct tuple_format *format,
 		     struct tuple_format *upsert_format,
 		     bool is_primary)
 {
 	itr->stat = stat;
 	itr->cmp_def = cmp_def;
+	key_def_ref(cmp_def);
 	itr->key_def = key_def;
+	key_def_ref(key_def);
 	itr->format = format;
 	itr->upsert_format = upsert_format;
 	itr->is_primary = is_primary;
@@ -1553,6 +1554,8 @@ vy_run_iterator_skip(struct vy_run_iterator *itr,
 void
 vy_run_iterator_close(struct vy_run_iterator *itr)
 {
+	key_def_unref(itr->key_def);
+	key_def_unref(itr->cmp_def);
 	vy_run_iterator_stop(itr);
 	TRASH(itr);
 }
@@ -2591,6 +2594,7 @@ vy_slice_stream_close(struct vy_stmt_stream *virt_stream)
 		tuple_unref(stream->tuple);
 		stream->tuple = NULL;
 	}
+	key_def_unref(stream->cmp_def);
 }
 
 static const struct vy_stmt_stream_iface vy_slice_stream_iface = {
@@ -2602,8 +2606,8 @@ static const struct vy_stmt_stream_iface vy_slice_stream_iface = {
 
 void
 vy_slice_stream_open(struct vy_slice_stream *stream, struct vy_slice *slice,
-		   const struct key_def *cmp_def, struct tuple_format *format,
-		   struct tuple_format *upsert_format, bool is_primary)
+		     struct key_def *cmp_def, struct tuple_format *format,
+		     struct tuple_format *upsert_format, bool is_primary)
 {
 	stream->base.iface = &vy_slice_stream_iface;
 
@@ -2614,6 +2618,7 @@ vy_slice_stream_open(struct vy_slice_stream *stream, struct vy_slice *slice,
 
 	stream->slice = slice;
 	stream->cmp_def = cmp_def;
+	key_def_ref(cmp_def);
 	stream->format = format;
 	stream->upsert_format = upsert_format;
 	stream->is_primary = is_primary;

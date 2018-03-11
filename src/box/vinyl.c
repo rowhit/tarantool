@@ -1089,6 +1089,52 @@ vinyl_space_check_format(struct space *new_space, struct space *old_space)
 	return -1;
 }
 
+/**
+ * Set new key_def and cmp_def in all index ranges, mems and in a
+ * cache.
+ * @param index Index to update.
+ * @param key_def New key definition.
+ * @param cmp_def New comparator definition.
+ * @param ranges_array Temporary array of double pointers to
+ *        vy_range used to avoid accesing them by the tree RB-tree
+ *        API when cmp_def is being changed. RB-tree API can not
+ *        be used because it requires that cmp_def must be the
+ *        same in all ranges. But it can not be updated in all
+ *        ranges at once and it is done in a cycle.
+ */
+static void
+vy_index_alter_key_def(struct vy_index *index, struct key_def *key_def,
+			 struct key_def *cmp_def,
+			 struct vy_range **ranges_array)
+{
+	key_def_unref(index->key_def);
+	index->key_def = key_def;
+	key_def_ref(key_def);
+	key_def_unref(index->cmp_def);
+	index->cmp_def = cmp_def;
+	key_def_ref(cmp_def);
+	index->cache.cmp_def = cmp_def;
+	index->cache.cache_tree.arg = cmp_def;
+	index->mem->cmp_def = cmp_def;
+	index->mem->tree.arg = cmp_def;
+	struct vy_mem *mem;
+	rlist_foreach_entry(mem, &index->sealed, in_sealed) {
+		mem->cmp_def = cmp_def;
+		mem->tree.arg = cmp_def;
+	}
+	int i = 0;
+	/*
+	 * Save ranges into the array before changing cmp_def.
+	 * RB-tree API does not work until cmp_def is updated
+	 * everywhere.
+	 */
+	for (struct vy_range *range = vy_range_tree_first(index->tree);
+	     range != NULL; range = vy_range_tree_next(index->tree, range))
+		ranges_array[i++] = range;
+	for (--i; i >= 0; --i)
+		ranges_array[i]->cmp_def = cmp_def;
+}
+
 static void
 vinyl_space_commit_alter(struct space *old_space, struct space *new_space)
 {
@@ -1115,6 +1161,26 @@ vinyl_space_commit_alter(struct space *old_space, struct space *new_space)
 		tuple_format_delete(format);
 		goto fail;
 	}
+	/*
+	 * Preallocate a buffer for ranges array, that can fit
+	 * ranges of any index.
+	 */
+	int max_range_count = 0;
+	for (uint32_t i = 0; i < new_space->index_count; ++i) {
+		struct vy_index *index = vy_index(new_space->index[i]);
+		if (max_range_count < index->range_count)
+			max_range_count = index->range_count;
+	}
+	assert(max_range_count > 0);
+	size_t size = sizeof(struct vy_range *) * max_range_count;
+	struct vy_range **ranges_array =
+		(struct vy_range **) region_alloc(&fiber()->gc, size);
+	if (ranges_array == NULL) {
+		diag_set(OutOfMemory, size, "region_alloc", "ranges_array");
+		tuple_format_delete(format);
+		tuple_format_delete(upsert_format);
+		goto fail;
+	}
 
 	/* Set possibly changed opts. */
 	pk->opts = new_index_def->opts;
@@ -1133,6 +1199,8 @@ vinyl_space_commit_alter(struct space *old_space, struct space *new_space)
 	tuple_format_ref(format);
 	pk->mem_format = new_format;
 	tuple_format_ref(new_format);
+	vy_index_alter_key_def(pk, new_space->index[0]->def->key_def,
+			       new_space->index[0]->def->cmp_def, ranges_array);
 	vy_index_validate_formats(pk);
 
 	for (uint32_t i = 1; i < new_space->index_count; ++i) {
@@ -1153,6 +1221,9 @@ vinyl_space_commit_alter(struct space *old_space, struct space *new_space)
 		tuple_format_ref(index->mem_format_with_colmask);
 		tuple_format_ref(index->mem_format);
 		tuple_format_ref(index->upsert_format);
+		vy_index_alter_key_def(index, new_space->index[i]->def->key_def,
+				       new_space->index[i]->def->cmp_def,
+				       ranges_array);
 		vy_index_validate_formats(index);
 	}
 
@@ -3573,11 +3644,6 @@ vy_squash_process(struct vy_squash *squash)
 
 	struct vy_index *index = squash->index;
 	struct vy_env *env = squash->env;
-	/*
-	 * vy_apply_upsert() is used for primary key only,
-	 * so this is the same as index->key_def
-	 */
-	struct key_def *def = index->cmp_def;
 
 	/* Upserts enabled only in the primary index. */
 	assert(index->id == 0);
@@ -3659,7 +3725,7 @@ vy_squash_process(struct vy_squash *squash)
 	while (!vy_mem_tree_iterator_is_invalid(&mem_itr)) {
 		mem_stmt = *vy_mem_tree_iterator_get_elem(&mem->tree, &mem_itr);
 		stmt_lsn = vy_stmt_lsn(mem_stmt);
-		if (vy_tuple_compare(result, mem_stmt, def) != 0)
+		if (vy_tuple_compare(result, mem_stmt, index->cmp_def) != 0)
 			break;
 		/**
 		 * Leave alone prepared statements; they will be handled
@@ -3677,8 +3743,8 @@ vy_squash_process(struct vy_squash *squash)
 		}
 		assert(index->id == 0);
 		struct tuple *applied =
-			vy_apply_upsert(mem_stmt, result, def, mem->format,
-					mem->upsert_format, true);
+			vy_apply_upsert(mem_stmt, result, index->cmp_def,
+					mem->format, mem->upsert_format, true);
 		index->stat.upsert.applied++;
 		tuple_unref(result);
 		if (applied == NULL)
@@ -3705,7 +3771,8 @@ vy_squash_process(struct vy_squash *squash)
 		while (!vy_mem_tree_iterator_is_invalid(&mem_itr)) {
 			mem_stmt = *vy_mem_tree_iterator_get_elem(&mem->tree,
 								  &mem_itr);
-			if (vy_tuple_compare(result, mem_stmt, def) != 0 ||
+			if (vy_tuple_compare(result, mem_stmt,
+					     index->cmp_def) != 0 ||
 			    vy_stmt_type(mem_stmt) != IPROTO_UPSERT)
 				break;
 			assert(vy_stmt_lsn(mem_stmt) >= MAX_LSN);

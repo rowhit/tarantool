@@ -391,10 +391,10 @@ s:drop()
 -- gh-3229: update optionality if a space format is changed too,
 -- not only when indexes are updated.
 --
-box.cfg{}
+utils = require('utils')
 ---
 ...
-s = box.schema.create_space('test', {engine = 'memtx'})
+s = box.schema.create_space('test', {engine = engine})
 ---
 ...
 format = {}
@@ -422,8 +422,39 @@ s:replace{2, 3, 4}
 ---
 - [2, 3, 4]
 ...
+s:replace{100, 200, 300}
+---
+- [100, 200, 300]
+...
+s:replace{300, 400, 500}
+---
+- [300, 400, 500]
+...
+s:replace{400, 500, 600}
+---
+- [400, 500, 600]
+...
+-- Do snapshot for Vinyl to test run_iterator local key_def is
+-- valid after alter().
+box.snapshot()
+---
+- ok
+...
+iter = utils.create_iterator(pk)
+---
+...
+iter.next()
+---
+- [2, 3, 4]
+...
 s:format({})
 ---
+...
+iter.iterate_over()
+---
+- 0: [100, 200, 300]
+  1: [300, 400, 500]
+  2: [400, 500, 600]
 ...
 s:insert({1})
 ---
@@ -450,6 +481,9 @@ s:select({})
   - [2, 3, 4]
   - [3, 4]
   - [4, 5]
+  - [100, 200, 300]
+  - [300, 400, 500]
+  - [400, 500, 600]
 ...
 pk:get({4})
 ---

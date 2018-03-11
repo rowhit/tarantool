@@ -168,7 +168,7 @@ struct vy_write_iterator {
 	/* A heap to order the sources, newest LSN at heap top. */
 	heap_t src_heap;
 	/** Index key definition used to store statements on disk. */
-	const struct key_def *cmp_def;
+	struct key_def *cmp_def;
 	/** Format to allocate new REPLACE and DELETE tuples from vy_run */
 	struct tuple_format *format;
 	/** Same as format, but for UPSERT tuples. */
@@ -330,7 +330,7 @@ static const struct vy_stmt_stream_iface vy_slice_stream_iface;
  * @return the iterator or NULL on error (diag is set).
  */
 struct vy_stmt_stream *
-vy_write_iterator_new(const struct key_def *cmp_def, struct tuple_format *format,
+vy_write_iterator_new(struct key_def *cmp_def, struct tuple_format *format,
 		      struct tuple_format *upsert_format, bool is_primary,
 		      bool is_last_level, struct rlist *read_views)
 {
@@ -363,6 +363,7 @@ vy_write_iterator_new(const struct key_def *cmp_def, struct tuple_format *format
 	vy_source_heap_create(&stream->src_heap);
 	rlist_create(&stream->src_list);
 	stream->cmp_def = cmp_def;
+	key_def_ref(cmp_def);
 	stream->format = format;
 	tuple_format_ref(stream->format);
 	stream->upsert_format = upsert_format;
@@ -416,6 +417,7 @@ vy_write_iterator_close(struct vy_stmt_stream *vstream)
 	vy_write_iterator_stop(vstream);
 	tuple_format_unref(stream->format);
 	tuple_format_unref(stream->upsert_format);
+	key_def_unref(stream->cmp_def);
 	free(stream);
 }
 
