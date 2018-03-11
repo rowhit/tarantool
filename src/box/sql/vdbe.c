@@ -4520,6 +4520,54 @@ case OP_IdxInsert: {        /* in2 */
 	break;
 }
 
+/* Opcode: SInsert P1 P2 * * *
+ * Synopsis: space id = r[P1], key = r[P2]
+ *
+ * This opcode is used for DML routine only.
+ * In contrast to ordinary insertion, insertion to system spaces
+ * such as _space or _index will lead to schema changes.
+ * Thus, usage of pointer to space and index structures is going
+ * to be impossible, since pointers can be expired.
+ */
+case OP_SInsert: {
+	assert(pOp->p1 > 0);
+	assert(pOp->p2 > 0);
+
+	pIn1 = &aMem[pOp->p1];
+	pIn2 = &aMem[pOp->p2];
+	struct space *space = space_by_id(pIn1->n);
+	assert(space != NULL);
+	assert(space_is_system(space));
+	/* Create surrogate cursor to pass to SQL bindings. */
+	BtCursor surrogate_cur;
+	surrogate_cur.space = space;
+	surrogate_cur.key = pIn2->z;
+	surrogate_cur.nKey = pIn2->n;
+	rc = tarantoolSqlite3Insert(&surrogate_cur, NULL);
+	if (rc)
+		goto abort_due_to_error;
+	break;
+}
+
+/* Opcode: SIDtoPtr P1 * P3 * *
+ * Synopsis: space id = r[P1], space[out] = P3
+ *
+ * This opcode makes look up by space id and save found space
+ * into register, specified by third operand.
+ * Third operand is used instead of second due to its ability
+ * to hold 64-bit pointers.
+ */
+case OP_SIDtoPtr: {
+	assert(pOp->p1 > 0);
+	assert(pOp->p3 > 0);
+
+	pIn1 = &aMem[pOp->p1];
+	struct space *space = space_by_id(pIn1->n);
+	assert(space != NULL);
+	pOp->p3 = (int64_t) space;
+	break;
+}
+
 /* Opcode: IdxDelete P1 P2 P3 * *
  * Synopsis: key=r[P2@P3]
  *
