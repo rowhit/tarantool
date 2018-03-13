@@ -1487,7 +1487,7 @@ loadStatTbl(sqlite3 * db,	/* Database handle */
 	if (rc)
 		goto finalize;
 
-	while (sqlite3_step(pStmt) == SQLITE_ROW) {
+	while (sqlite3_step(pStmt, NULL) == SQLITE_ROW) {
 		int nIdxCol = 1;	/* Number of columns in stat4 records */
 
 		char *zTab;	/* Table name */
@@ -1550,7 +1550,7 @@ loadStatTbl(sqlite3 * db,	/* Database handle */
 	if (rc)
 		goto finalize;
 
-	while (sqlite3_step(pStmt) == SQLITE_ROW) {
+	while (sqlite3_step(pStmt, NULL) == SQLITE_ROW) {
 		char *zTab;	/* Table name */
 		char *zIndex;	/* Index name */
 		Index *pIdx;	/* Pointer to the index object */

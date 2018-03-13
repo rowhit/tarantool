@@ -355,6 +355,7 @@ struct sql_txn {
 	i64 nDeferredImmConsSave;
 };
 
+struct sql_options;
 /*
  * An instance of the virtual machine.  This structure contains the complete
  * state of the virtual machine.
@@ -444,6 +445,10 @@ struct Vdbe {
 	int nScan;		/* Entries in aScan[] */
 	ScanStatus *aScan;	/* Scan definitions for sqlite3_stmt_scanstatus() */
 #endif
+
+	struct sql_options *sql_options; /* If not NULL, data to be passed back
+					  * to Tarantool.
+					  */
 };
 
 /*

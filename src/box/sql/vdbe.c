@@ -50,6 +50,7 @@
 #include "box/schema.h"
 #include "box/space.h"
 #include "box/sequence.h"
+#include "box/sql.h"
 
 /*
  * Invoke this macro on memory cells just prior to changing the
@@ -4448,10 +4449,13 @@ case OP_IdxInsert: {        /* in2 */
 		if (pBtCur->curFlags & BTCF_TaCursor) {
 			/* Make sure that memory has been allocated on region. */
 			assert(aMem[pOp->p2].flags & MEM_Ephem);
-			if (pOp->opcode == OP_IdxInsert)
-				rc = tarantoolSqlite3Insert(pBtCur);
-			else
-				rc = tarantoolSqlite3Replace(pBtCur);
+			struct tuple **last_tuple = p->sql_options->last_tuple;
+			if (pOp->opcode == OP_IdxInsert) {
+				rc = tarantoolSqlite3Insert(pBtCur, last_tuple);
+			} else {
+				rc = tarantoolSqlite3Replace(pBtCur,
+							     last_tuple);
+			}
 		} else if (pBtCur->curFlags & BTCF_TEphemCursor) {
 			rc = tarantoolSqlite3EphemeralInsert(pBtCur);
 		} else {

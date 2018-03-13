@@ -519,7 +519,8 @@ int tarantoolSqlite3EphemeralDrop(BtCursor *pCur)
 	return SQLITE_OK;
 }
 
-static int insertOrReplace(BtCursor *pCur, int operationType)
+static int
+insertOrReplace(BtCursor *pCur, int operationType, struct tuple **tuple)
 {
 	assert(pCur->curFlags & BTCF_TaCursor);
 	assert(operationType == TARANTOOL_INDEX_INSERT ||
@@ -527,27 +528,33 @@ static int insertOrReplace(BtCursor *pCur, int operationType)
 
 	int space_id = SQLITE_PAGENO_TO_SPACEID(pCur->pgnoRoot);
 	int rc;
+	if (tuple != NULL && *tuple != NULL) {
+		tuple_unref(*tuple);
+		*tuple = NULL;
+	}
 	if (operationType == TARANTOOL_INDEX_INSERT) {
 		rc = box_insert(space_id, pCur->pKey,
-				(const char *)pCur->pKey + pCur->nKey,
-				NULL /* result */);
+				(const char *)pCur->pKey + pCur->nKey, tuple);
 	} else {
 		rc = box_replace(space_id, pCur->pKey,
-				 (const char *)pCur->pKey + pCur->nKey,
-				 NULL /* result */);
+				 (const char *)pCur->pKey + pCur->nKey, tuple);
 	}
+	if (tuple != NULL && *tuple != NULL)
+		tuple_ref(*tuple);
 
 	return rc == 0 ? SQLITE_OK : SQL_TARANTOOL_INSERT_FAIL;;
 }
 
-int tarantoolSqlite3Insert(BtCursor *pCur)
+int
+tarantoolSqlite3Insert(BtCursor *pCur, struct tuple **tuple)
 {
-	return insertOrReplace(pCur, TARANTOOL_INDEX_INSERT);
+	return insertOrReplace(pCur, TARANTOOL_INDEX_INSERT, tuple);
 }
 
-int tarantoolSqlite3Replace(BtCursor *pCur)
+int
+tarantoolSqlite3Replace(BtCursor *pCur, struct tuple **tuple)
 {
-	return insertOrReplace(pCur, TARANTOOL_INDEX_REPLACE);
+	return insertOrReplace(pCur, TARANTOOL_INDEX_REPLACE, tuple);
 }
 
 /*
