@@ -59,6 +59,7 @@
 #include "replication.h" /* instance_uuid */
 #include "iproto_constants.h"
 #include "rmean.h"
+#include "errinj.h"
 
 /* The number of iproto messages in flight */
 enum { IPROTO_MSG_MAX = 768 };
@@ -749,6 +750,7 @@ iproto_flush(struct iproto_connection *con)
 	/* *Overwrite* iov_len of the last pos as it may be garbage. */
 	iov[iovcnt-1].iov_len = end->iov_len - begin->iov_len * (iovcnt == 1);
 
+	ERROR_INJECT(ERRINJ_IPROTO_FLUSH_DELAY, { usleep(100); return -1; });
 	ssize_t nwr = sio_writev(fd, iov, iovcnt);
 
 	/* Count statistics */
@@ -1167,7 +1169,6 @@ static void
 tx_process1(struct cmsg *m)
 {
 	struct iproto_msg *msg = tx_accept_msg(m);
-	struct obuf *out = msg->connection->tx.p_obuf;
 
 	tx_fiber_init(msg->connection->session, msg->header.sync);
 	if (tx_check_schema(msg->header.schema_version))
@@ -1175,8 +1176,11 @@ tx_process1(struct cmsg *m)
 
 	struct tuple *tuple;
 	struct obuf_svp svp;
-	if (box_process1(&msg->dml, &tuple) ||
-	    iproto_prepare_select(out, &svp))
+	struct obuf *out;
+	if (box_process1(&msg->dml, &tuple) != 0)
+		goto error;
+	out = msg->connection->tx.p_obuf;
+	if (iproto_prepare_select(out, &svp) != 0)
 		goto error;
 	if (tuple && tuple_to_obuf(tuple, out))
 		goto error;
@@ -1192,7 +1196,7 @@ static void
 tx_process_select(struct cmsg *m)
 {
 	struct iproto_msg *msg = tx_accept_msg(m);
-	struct obuf *out = msg->connection->tx.p_obuf;
+	struct obuf *out;
 	struct obuf_svp svp;
 	struct port port;
 	int count;
@@ -1209,6 +1213,8 @@ tx_process_select(struct cmsg *m)
 			req->key, req->key_end, &port);
 	if (rc < 0)
 		goto error;
+
+	out = msg->connection->tx.p_obuf;
 	if (iproto_prepare_select(out, &svp) != 0) {
 		port_destroy(&port);
 		goto error;

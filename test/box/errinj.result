@@ -38,6 +38,8 @@ errinj.info()
     state: false
   ERRINJ_PORT_DUMP:
     state: false
+  ERRINJ_IPROTO_FLUSH_DELAY:
+    state: false
   ERRINJ_WAL_IO:
     state: false
   ERRINJ_TUPLE_ALLOC:
@@ -1055,5 +1057,132 @@ box.error.injection.set('ERRINJ_BUILD_SECONDARY', -1)
 - ok
 ...
 s:drop()
+---
+...
+--
+-- Check that IProto commands get obuf right before sending it to
+-- IProto thread. The test was failed with discarding an response
+-- before its sending to a client. A plan is the following:
+--
+--        obuf[0]                           obuf[1]
+-- 1) start DML, yield;
+-- 2) do DQL, store in obuf,
+--    block on socket write;
+--                                      3) do DQL, store in obuf,
+--                                         block on socket write;
+--                                      4) start DML, yield;
+--                                      5) do DQL, store in obuf,
+--                                         block on socket write;
+--              6) flush all DQL responses,
+--                 DML still yields in both
+--                 obufs;
+--
+--              7) both DML finishes, and
+--                 are dumped into both
+--                 obuf[0] and obuf[1], but
+--                 block on socket write
+--                 again;
+--
+-- 8) Now TX thread owns obuf[1] and thinks, that obuf[0] is fully
+--    flushed, and on a next DQL it resets obuf[0], discarding all
+--    its data, including non-sent DML response.
+--
+--
+box.schema.user.grant('guest', 'read,write,execute', 'universe')
+---
+...
+s = box.schema.create_space('test')
+---
+...
+pk = s:create_index('pk')
+---
+...
+s:replace{1}
+---
+- [1]
+...
+c = net_box.connect(box.cfg.listen)
+---
+...
+errinj.set("ERRINJ_WAL_DELAY", true)
+---
+- ok
+...
+errinj.set("ERRINJ_IPROTO_FLUSH_DELAY", true)
+---
+- ok
+...
+long_dml1_f = fiber.create(function() c.space.test:replace{100} end)
+---
+...
+fiber.sleep(0.05)
+---
+...
+long_get1_f = fiber.create(function() c.space.test:get{1} end)
+---
+...
+fiber.sleep(0.05)
+---
+...
+long_get2_f = fiber.create(function() c.space.test:get{1} end)
+---
+...
+fiber.sleep(0.05)
+---
+...
+long_dml2_f = fiber.create(function() c.space.test:replace{200} end)
+---
+...
+fiber.sleep(0.05)
+---
+...
+long_get3_f = fiber.create(function() c.space.test:get{1} end)
+---
+...
+fiber.sleep(0.05)
+---
+...
+errinj.set("ERRINJ_IPROTO_FLUSH_DELAY", false)
+---
+- ok
+...
+while long_get1_f:status() ~= 'dead' or long_get2_f:status() ~= 'dead' or long_get3_f:status() ~= 'dead' do fiber.sleep(0.1) end
+---
+...
+errinj.set("ERRINJ_IPROTO_FLUSH_DELAY", true)
+---
+- ok
+...
+errinj.set("ERRINJ_WAL_DELAY", false)
+---
+- ok
+...
+fiber.sleep(0.05)
+---
+...
+long_get1_f = fiber.create(function() c.space.test:get{1} end)
+---
+...
+fiber.sleep(0.05)
+---
+...
+errinj.set("ERRINJ_IPROTO_FLUSH_DELAY", false)
+---
+- ok
+...
+fiber.sleep(0.05)
+---
+...
+long_dml1_f:status() == 'dead' and long_dml2_f:status() == 'dead'
+---
+- true
+...
+c:close()
+---
+...
+s:drop()
+---
+...
+box.schema.user.revoke('guest', 'read,write,execute', 'universe')
 ---
 ...
