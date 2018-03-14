@@ -74,8 +74,8 @@
 #define OP_Null           71 /* synopsis: r[P2..P3]=NULL                   */
 #define OP_SoftNull       72 /* synopsis: r[P1]=NULL                       */
 #define OP_Blob           73 /* synopsis: r[P2]=P4 (len=P1, subtype=P3)    */
-#define OP_Variable       74 /* synopsis: r[P2]=parameter(P1,P4)           */
-#define OP_String8        75 /* same as TK_STRING, synopsis: r[P2]='P4'    */
+#define OP_String8        74 /* same as TK_STRING, synopsis: r[P2]='P4'    */
+#define OP_Variable       75 /* synopsis: r[P2]=parameter(P1,P4)           */
 #define OP_Move           76 /* synopsis: r[P2@P3]=r[P1@P3]                */
 #define OP_Copy           77 /* synopsis: r[P2@P3+1]=r[P1@P3+1]            */
 #define OP_SCopy          78 /* synopsis: r[P2]=r[P1]                      */
@@ -114,8 +114,8 @@
 #define OP_ResetCount    111
 #define OP_SorterCompare 112 /* synopsis: if key(P1)!=trim(r[P3],P4) goto P2 */
 #define OP_SorterData    113 /* synopsis: r[P2]=data                       */
-#define OP_RowData       114 /* synopsis: r[P2]=data                       */
-#define OP_Real          115 /* same as TK_FLOAT, synopsis: r[P2]=P4       */
+#define OP_Real          114 /* same as TK_FLOAT, synopsis: r[P2]=P4       */
+#define OP_RowData       115 /* synopsis: r[P2]=data                       */
 #define OP_NullRow       116
 #define OP_SorterInsert  117 /* synopsis: key=r[P2]                        */
 #define OP_IdxReplace    118 /* synopsis: key=r[P2]                        */
@@ -168,7 +168,7 @@
 /*  88 */ 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x10,\
 /*  96 */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,\
 /* 104 */ 0x00, 0x00, 0x10, 0x20, 0x00, 0x10, 0x00, 0x00,\
-/* 112 */ 0x00, 0x00, 0x00, 0x10, 0x00, 0x04, 0x00, 0x04,\
+/* 112 */ 0x00, 0x00, 0x10, 0x00, 0x00, 0x04, 0x00, 0x04,\
 /* 120 */ 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,\
 /* 128 */ 0x00, 0x00, 0x00, 0x10, 0x00, 0x04, 0x1a, 0x00,\
 /* 136 */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,}

@@ -99,11 +99,6 @@ struct Keyword {
 #else
 #  define PRAGMA     0x00000400
 #endif
-#ifdef SQLITE_OMIT_REINDEX
-#  define REINDEX    0
-#else
-#  define REINDEX    0x00000800
-#endif
 #ifdef SQLITE_OMIT_SUBQUERY
 #  define SUBQUERY   0
 #else
@@ -222,7 +217,6 @@ static Keyword aKeywordTable[] = {
   { "RECURSIVE",              "TK_RECURSIVE",   CTE,              true  },
   { "REFERENCES",             "TK_REFERENCES",  FKEY,             true  },
   { "REGEXP",                 "TK_LIKE_KW",     ALWAYS,           false },
-  { "REINDEX",                "TK_REINDEX",     REINDEX,          true  },
   { "RELEASE",                "TK_RELEASE",     ALWAYS,           true  },
   { "RENAME",                 "TK_RENAME",      ALTER,            true  },
   { "REPLACE",                "TK_REPLACE",     CONFLICT,         true  },
