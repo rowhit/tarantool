@@ -119,6 +119,13 @@ struct log {
 	pid_t pid;
 	/* Application identifier used to group syslog messages. */
 	char *syslog_ident;
+	/* mutex and conditional variable securing variable below
+	 * from concurrent usage
+	 */
+	pthread_mutex_t mutex;
+	pthread_cond_t cond;
+	/* Counter identifying number of threads executing log_rotate*/
+	int rotating_threads;
 	struct rlist in_log_list;
 };
 

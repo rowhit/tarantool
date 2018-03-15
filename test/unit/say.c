@@ -4,6 +4,8 @@
 #include "unit.h"
 #include "say.h"
 #include <pthread.h>
+#include <errinj.h>
+#include <coio_task.h>
 
 int
 parse_logger_type(const char *input)
@@ -61,67 +63,37 @@ format_func_custom(struct log *log, char *buf, int len, int level,
 	return total;
 }
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-pthread_cond_t cond_sync = PTHREAD_COND_INITIALIZER;
-
-bool is_raised = false;
-int created_logs = 0;
-
-static void *
-dummy_log(void *arg)
-{
-	const char *tmp_dir = (const char *) arg;
-	char tmp_filename[30];
-	sprintf(tmp_filename, "%s/%i.log", tmp_dir, (int) pthread_self());
-	pthread_mutex_lock(&mutex);
-	struct log test_log;
-	log_create(&test_log, tmp_filename, false);
-	// signal that log is created
-	created_logs++;
-	pthread_cond_signal(&cond_sync);
-
-	// wait until rotate signal is raised
-	while (!is_raised)
-		pthread_cond_wait(&cond, &mutex);
-
-	log_destroy(&test_log);
-	created_logs--;
-	pthread_cond_signal(&cond_sync);
-	pthread_mutex_unlock(&mutex);
-	return NULL;
-}
-
 static void
 test_log_rotate()
 {
 	char template[] = "/tmp/tmpdir.XXXXXX";
 	const char *tmp_dir = mkdtemp(template);
-	int running = 0;
+	const int NUMBER_LOGGERS = 10;
+	struct log * loggers = (struct log *) calloc(NUMBER_LOGGERS,
+						     sizeof(struct log));
+	if (loggers == NULL) {
+		return;
+	}
+	char tmp_filename[30];
 	for (int i = 0; i < 10; i++) {
-		pthread_t thread;
-		if (pthread_create(&thread, NULL, dummy_log, (void *) tmp_dir) >= 0)
-			running++;
+		sprintf(tmp_filename, "%s/%i.log", tmp_dir, i);
+		log_create(&loggers[i], tmp_filename, false);
 	}
-	pthread_mutex_lock(&mutex);
-	// wait loggers are created
-	while (created_logs < running) {
-		pthread_cond_wait(&cond_sync, &mutex);
+	say_logrotate(NULL, NULL, 0);
+	for (int i = 0; i < 10; i++) {
+		log_destroy(&loggers[i]);
 	}
-	raise(SIGHUP);
-	is_raised = true;
-	pthread_cond_broadcast(&cond);
-
-	// wait until loggers are closed
-	while(created_logs != 0)
-		pthread_cond_wait(&cond_sync, &mutex);
-	pthread_mutex_unlock(&mutex);
+	memset(loggers, '#', NUMBER_LOGGERS * sizeof(struct log));
+	free(loggers);
+	usleep(1000);
 }
 
 int main()
 {
 	memory_init();
 	fiber_init(fiber_c_invoke);
+	coio_init();
+	coio_enable();
 	say_logger_init("/dev/null", S_INFO, 0, "plain", 0);
 
 	plan(23);
@@ -187,11 +159,10 @@ int main()
 	}
 	log_destroy(&test_log);
 
+	struct errinj *inj = errinj_by_name("ERRINJ_LOG_ROTATE");
+	inj->bparam = true;
 	// test on log_rotate signal handling
-	struct ev_signal ev_sig;
-	ev_signal_init(&ev_sig, say_logrotate, SIGHUP);
-	ev_signal_start(loop(), &ev_sig);
 	test_log_rotate();
-	ev_signal_stop(loop(), &ev_sig);
+	inj->bparam = false;
 	return check_plan();
 }

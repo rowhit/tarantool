@@ -30,6 +30,7 @@
  */
 #include "say.h"
 #include "fiber.h"
+#include "errinj.h"
 
 #include <errno.h>
 #include <stdarg.h>
@@ -242,6 +243,11 @@ log_rotate(struct log *log)
 	if (log->type != SAY_LOGGER_FILE) {
 		return 0;
 	}
+	tt_pthread_mutex_lock(&log->mutex);
+	log->rotating_threads++;
+	tt_pthread_mutex_unlock(&log->mutex);
+	ERROR_INJECT(ERRINJ_LOG_ROTATE, { usleep(10); });
+
 	int fd = open(log->path, O_WRONLY | O_APPEND | O_CREAT,
 		      S_IRUSR | S_IWUSR | S_IRGRP);
 	if (fd < 0) {
@@ -275,6 +281,11 @@ log_rotate(struct log *log)
 		dup2(log_default->fd, STDOUT_FILENO);
 		dup2(log_default->fd, STDERR_FILENO);
 	}
+
+	tt_pthread_mutex_lock(&log->mutex);
+	log->rotating_threads--;
+	tt_pthread_cond_signal(&log->cond);
+	tt_pthread_mutex_unlock(&log->mutex);
 
 	return 0;
 }
@@ -502,6 +513,9 @@ log_create(struct log *log, const char *init_str, bool nonblock)
 	log->format_func = NULL;
 	log->level = S_INFO;
 	log->nonblock = nonblock;
+	log->rotating_threads = 0;
+	tt_pthread_cond_init(&log->cond, NULL);
+	tt_pthread_mutex_init(&log->mutex, NULL);
 	setvbuf(stderr, NULL, _IONBF, 0);
 
 	if (init_str != NULL) {
@@ -1016,10 +1030,17 @@ void
 log_destroy(struct log *log)
 {
 	assert(log != NULL);
+	tt_pthread_mutex_lock(&log->mutex);
+	while(log->rotating_threads > 0)
+		tt_pthread_cond_wait(&log->cond, &log->mutex);
 	if (log->fd != -1)
 		close(log->fd);
 	free(log->syslog_ident);
 	rlist_del_entry(log, in_log_list);
+	log->type = SAY_LOGGER_BOOT;
+	tt_pthread_mutex_unlock(&log->mutex);
+	tt_pthread_cond_destroy(&log->cond);
+	tt_pthread_mutex_destroy(&log->mutex);
 }
 
 static inline int
