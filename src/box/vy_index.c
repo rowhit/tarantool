@@ -221,7 +221,6 @@ vy_index_new(struct vy_index_env *index_env, struct vy_cache_env *cache_env,
 		goto fail_mem;
 
 	index->refs = 1;
-	index->commit_lsn = -1;
 	index->dump_lsn = -1;
 	vy_cache_create(&index->cache, cache_env, cmp_def);
 	rlist_create(&index->sealed);
@@ -533,29 +532,26 @@ out:
 
 int
 vy_index_recover(struct vy_index *index, struct vy_recovery *recovery,
-		 struct vy_run_env *run_env, int64_t lsn,
+		 struct vy_run_env *run_env,
 		 bool is_checkpoint_recovery, bool force_recovery)
 {
 	assert(index->range_count == 0);
 
 	/*
-	 * Backward compatibility fixup: historically, we used
-	 * box.info.signature for LSN of index creation, which
-	 * lags behind the LSN of the record that created the
-	 * index by 1. So for legacy indexes use the LSN from
-	 * index options.
-	 */
-	if (index->opts.lsn != 0)
-		lsn = index->opts.lsn;
-
-	/*
 	 * Look up the last incarnation of the index in vylog.
 	 */
+	struct vy_index_recovery_id index_id = {
+		.index_id = index->id,
+		.space_id = index->space_id,
+	};
 	struct vy_index_recovery_info *index_info;
-	index_info = vy_recovery_lookup_index(recovery,
-					      index->space_id, index->id);
-	if (is_checkpoint_recovery) {
-		if (index_info == NULL) {
+	index_info = vy_recovery_lookup_index(recovery, &index_id);
+	if (index_info == NULL || index_info->incarnation_count == 0) {
+		/*
+		 * The index was either not found in vylog or
+		 * all incarnations have already been loaded.
+		 */
+		if (is_checkpoint_recovery) {
 			/*
 			 * All indexes created from snapshot rows must
 			 * be present in vylog, because snapshot can
@@ -568,16 +564,6 @@ vy_index_recover(struct vy_index *index, struct vy_recovery *recovery,
 					    (unsigned)index->id));
 			return -1;
 		}
-		if (lsn > index_info->index_lsn) {
-			/*
-			 * The last incarnation of the index was created
-			 * before the last checkpoint, load it now.
-			 */
-			lsn = index_info->index_lsn;
-		}
-	}
-
-	if (index_info == NULL || lsn > index_info->index_lsn) {
 		/*
 		 * If we failed to log index creation before restart,
 		 * we won't find it in the log on recovery. This is
@@ -588,9 +574,12 @@ vy_index_recover(struct vy_index *index, struct vy_recovery *recovery,
 		return vy_index_init_range_tree(index);
 	}
 
-	index->commit_lsn = lsn;
+	index->is_committed = true;
 
-	if (lsn < index_info->index_lsn || index_info->is_dropped) {
+	/* Advance to the next incarnation. */
+	index_info->incarnation_count--;
+
+	if (index_info->incarnation_count > 0 || index_info->is_dropped) {
 		/*
 		 * Loading a past incarnation of the index, i.e.
 		 * the index is going to dropped during final
@@ -671,8 +660,9 @@ vy_index_recover(struct vy_index *index, struct vy_recovery *recovery,
 	}
 	if (prev == NULL) {
 		diag_set(ClientError, ER_INVALID_VYLOG_FILE,
-			 tt_sprintf("Index %lld has empty range tree",
-				    (long long)index->commit_lsn));
+			 tt_sprintf("Index %u/%u has empty range tree",
+				    (unsigned)index->space_id,
+				    (unsigned)index->id));
 		return -1;
 	}
 	if (prev->end != NULL) {
@@ -1049,7 +1039,7 @@ vy_index_split_range(struct vy_index *index, struct vy_range *range)
 	vy_log_delete_range(range->id);
 	for (int i = 0; i < n_parts; i++) {
 		part = parts[i];
-		vy_log_insert_range(index->commit_lsn, part->id,
+		vy_log_insert_range(index->space_id, index->id, part->id,
 				    tuple_data_or_null(part->begin),
 				    tuple_data_or_null(part->end));
 		rlist_foreach_entry(slice, &part->slices, in_range)
@@ -1115,7 +1105,7 @@ vy_index_coalesce_range(struct vy_index *index, struct vy_range *range)
 	 * Log change in metadata.
 	 */
 	vy_log_tx_begin();
-	vy_log_insert_range(index->commit_lsn, result->id,
+	vy_log_insert_range(index->space_id, index->id, result->id,
 			    tuple_data_or_null(result->begin),
 			    tuple_data_or_null(result->end));
 	for (it = first; it != end; it = vy_range_tree_next(index->tree, it)) {

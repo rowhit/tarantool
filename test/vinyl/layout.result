@@ -128,19 +128,19 @@ result
     - - HEADER:
           type: INSERT
         BODY:
-          tuple: [0, {0: 3, 7: [{'field': 0, 'collation': 1, 'type': 'string'}], 6: 512}]
+          tuple: [0, {7: [{'field': 0, 'collation': 1, 'type': 'string'}], 6: 512}]
       - HEADER:
           type: INSERT
         BODY:
-          tuple: [10, {0: 3, 9: 9}]
+          tuple: [10, {9: 9, 6: 512}]
       - HEADER:
           type: INSERT
         BODY:
-          tuple: [5, {0: 3, 2: 6, 9: 9}]
+          tuple: [5, {2: 6, 9: 9, 6: 512}]
       - HEADER:
           type: INSERT
         BODY:
-          tuple: [4, {0: 3, 2: 3}]
+          tuple: [4, {2: 3, 6: 512}]
       - HEADER:
           type: INSERT
         BODY:
@@ -148,7 +148,7 @@ result
       - HEADER:
           type: INSERT
         BODY:
-          tuple: [2, {0: 3}]
+          tuple: [2, {6: 512}]
       - HEADER:
           type: INSERT
         BODY:
@@ -156,19 +156,19 @@ result
       - HEADER:
           type: INSERT
         BODY:
-          tuple: [0, {0: 4, 5: 1, 6: 512, 7: [{'field': 1, 'is_nullable': true, 'type': 'unsigned'}]}]
+          tuple: [0, {5: 1, 6: 512, 7: [{'field': 1, 'is_nullable': true, 'type': 'unsigned'}]}]
       - HEADER:
           type: INSERT
         BODY:
-          tuple: [10, {0: 4, 9: 9}]
+          tuple: [10, {9: 9, 5: 1, 6: 512}]
       - HEADER:
           type: INSERT
         BODY:
-          tuple: [5, {0: 4, 2: 4, 9: 9}]
+          tuple: [5, {2: 4, 5: 1, 6: 512, 9: 9}]
       - HEADER:
           type: INSERT
         BODY:
-          tuple: [4, {0: 4, 2: 2}]
+          tuple: [4, {2: 2, 5: 1, 6: 512}]
       - HEADER:
           type: INSERT
         BODY:
@@ -176,7 +176,7 @@ result
       - HEADER:
           type: INSERT
         BODY:
-          tuple: [2, {0: 4, 1: 1}]
+          tuple: [2, {1: 1, 5: 1, 6: 512}]
       - HEADER:
           type: INSERT
         BODY:
@@ -199,12 +199,12 @@ result
           timestamp: <timestamp>
           type: INSERT
         BODY:
-          tuple: [4, {0: 4, 2: 8}]
+          tuple: [4, {2: 8, 5: 1, 6: 512}]
       - HEADER:
           timestamp: <timestamp>
           type: INSERT
         BODY:
-          tuple: [5, {0: 4, 2: 8, 9: 12}]
+          tuple: [5, {2: 8, 5: 1, 6: 512, 9: 12}]
       - HEADER:
           timestamp: <timestamp>
           type: INSERT
@@ -214,17 +214,17 @@ result
           timestamp: <timestamp>
           type: INSERT
         BODY:
-          tuple: [10, {0: 4, 9: 12}]
+          tuple: [10, {9: 12, 5: 1, 6: 512}]
       - HEADER:
           timestamp: <timestamp>
           type: INSERT
         BODY:
-          tuple: [4, {0: 3, 2: 10}]
+          tuple: [4, {2: 10, 6: 512}]
       - HEADER:
           timestamp: <timestamp>
           type: INSERT
         BODY:
-          tuple: [5, {0: 3, 2: 10, 9: 12}]
+          tuple: [5, {2: 10, 9: 12, 6: 512}]
       - HEADER:
           timestamp: <timestamp>
           type: INSERT
@@ -234,7 +234,7 @@ result
           timestamp: <timestamp>
           type: INSERT
         BODY:
-          tuple: [10, {0: 3, 9: 12}]
+          tuple: [10, {9: 12, 6: 512}]
   - - 00000000000000000006.index
     - - HEADER:
           type: RUNINFO

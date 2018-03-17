@@ -53,7 +53,7 @@ vy_log_write(const struct vy_log_record *record) {}
 
 struct vy_index_recovery_info *
 vy_recovery_lookup_index(struct vy_recovery *recovery,
-			 uint32_t space_id, uint32_t index_id)
+			 const struct vy_index_recovery_id *id)
 {
 	unreachable();
 }

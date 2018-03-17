@@ -765,7 +765,6 @@ vy_index_open(struct vy_env *env, struct vy_index *index)
 		 * the index files from it.
 		 */
 		rc = vy_index_recover(index, env->recovery, &env->run_env,
-				vclock_sum(env->recovery_vclock),
 				env->status == VINYL_INITIAL_RECOVERY_LOCAL,
 				env->force_recovery);
 		break;
@@ -778,6 +777,8 @@ vy_index_open(struct vy_env *env, struct vy_index *index)
 static void
 vinyl_index_commit_create(struct index *base, int64_t lsn)
 {
+	(void)lsn;
+
 	struct vy_env *env = vy_env(base->engine);
 	struct vy_index *index = vy_index(base);
 
@@ -791,32 +792,13 @@ vinyl_index_commit_create(struct index *base, int64_t lsn)
 		 * the index isn't in the recovery context and we
 		 * need to retry to log it now.
 		 */
-		if (index->commit_lsn >= 0) {
+		if (index->is_committed) {
 			vy_scheduler_add_index(&env->scheduler, index);
 			return;
 		}
 	}
 
-	if (env->status == VINYL_INITIAL_RECOVERY_REMOTE) {
-		/*
-		 * Records received during initial join do not
-		 * have LSNs so we use a fake one to identify
-		 * the index in vylog.
-		 */
-		lsn = ++env->join_lsn;
-	}
-
-	/*
-	 * Backward compatibility fixup: historically, we used
-	 * box.info.signature for LSN of index creation, which
-	 * lags behind the LSN of the record that created the
-	 * index by 1. So for legacy indexes use the LSN from
-	 * index options.
-	 */
-	if (index->opts.lsn != 0)
-		lsn = index->opts.lsn;
-
-	index->commit_lsn = lsn;
+	index->is_committed = true;
 
 	assert(index->range_count == 1);
 	struct vy_range *range = vy_range_tree_first(index->tree);
@@ -830,9 +812,8 @@ vinyl_index_commit_create(struct index *base, int64_t lsn)
 	 * recovery.
 	 */
 	vy_log_tx_begin();
-	vy_log_create_index(index->commit_lsn, index->id,
-			    index->space_id, index->key_def);
-	vy_log_insert_range(index->commit_lsn, range->id, NULL, NULL);
+	vy_log_create_index(index->space_id, index->id, index->key_def);
+	vy_log_insert_range(index->space_id, index->id, range->id, NULL, NULL);
 	vy_log_tx_try_commit();
 	/*
 	 * After we committed the index in the log, we can schedule
@@ -889,7 +870,7 @@ vinyl_index_commit_drop(struct index *base)
 
 	vy_log_tx_begin();
 	vy_log_index_prune(index, checkpoint_last(NULL));
-	vy_log_drop_index(index->commit_lsn);
+	vy_log_drop_index(index->space_id, index->id);
 	vy_log_tx_try_commit();
 }
 
@@ -938,7 +919,7 @@ vinyl_space_prepare_truncate(struct space *old_space, struct space *new_space)
 		struct vy_index *old_index = vy_index(old_space->index[i]);
 		struct vy_index *new_index = vy_index(new_space->index[i]);
 
-		new_index->commit_lsn = old_index->commit_lsn;
+		new_index->is_committed = old_index->is_committed;
 
 		if (truncate_done) {
 			/*
@@ -1015,9 +996,9 @@ vinyl_space_commit_truncate(struct space *old_space, struct space *new_space)
 		assert(new_index->range_count == 1);
 
 		vy_log_index_prune(old_index, gc_lsn);
-		vy_log_insert_range(new_index->commit_lsn,
+		vy_log_insert_range(new_index->space_id, new_index->id,
 				    range->id, NULL, NULL);
-		vy_log_truncate_index(new_index->commit_lsn,
+		vy_log_truncate_index(new_index->space_id, new_index->id,
 				      new_index->truncate_count);
 	}
 	vy_log_tx_try_commit();
