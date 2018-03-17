@@ -775,10 +775,8 @@ vy_index_open(struct vy_env *env, struct vy_index *index)
 }
 
 static void
-vinyl_index_commit_create(struct index *base, int64_t lsn)
+vinyl_index_commit_create(struct index *base)
 {
-	(void)lsn;
-
 	struct vy_env *env = vy_env(base->engine);
 	struct vy_index *index = vy_index(base);
 

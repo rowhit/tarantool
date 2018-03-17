@@ -616,8 +616,7 @@ public:
 	struct rlist link;
 	virtual void alter_def(struct alter_space * /* alter */) {}
 	virtual void alter(struct alter_space * /* alter */) {}
-	virtual void commit(struct alter_space * /* alter */,
-			    int64_t /* signature */) {}
+	virtual void commit(struct alter_space * /* alter */) {}
 	virtual void rollback(struct alter_space * /* alter */) {}
 	virtual ~AlterSpaceOp() {}
 
@@ -717,7 +716,7 @@ AlterSpaceOp::AlterSpaceOp(struct alter_space *alter)
 static void
 alter_space_commit(struct trigger *trigger, void *event)
 {
-	struct txn *txn = (struct txn *) event;
+	(void) event;
 	struct alter_space *alter = (struct alter_space *) trigger->data;
 	/*
 	 * Commit alter ops, this will move the changed
@@ -725,7 +724,7 @@ alter_space_commit(struct trigger *trigger, void *event)
 	 */
 	class AlterSpaceOp *op;
 	rlist_foreach_entry(op, &alter->ops, link) {
-		op->commit(alter, txn->signature);
+		op->commit(alter);
 	}
 
 	trigger_run_xc(&on_alter_space, alter->new_space);
@@ -919,7 +918,7 @@ public:
 		  new_def(new_def) {}
 	virtual void alter(struct alter_space *alter);
 	virtual void alter_def(struct alter_space *alter);
-	virtual void commit(struct alter_space *alter, int64_t lsn);
+	virtual void commit(struct alter_space *alter);
 	virtual ~ModifySpaceFormat();
 };
 
@@ -954,10 +953,9 @@ ModifySpaceFormat::alter(struct alter_space *alter)
 }
 
 void
-ModifySpaceFormat::commit(struct alter_space *alter, int64_t lsn)
+ModifySpaceFormat::commit(struct alter_space *alter)
 {
 	(void) alter;
-	(void) lsn;
 	old_dict = NULL;
 }
 
@@ -1009,7 +1007,7 @@ public:
 	struct index_def *old_index_def;
 	virtual void alter_def(struct alter_space *alter);
 	virtual void alter(struct alter_space *alter);
-	virtual void commit(struct alter_space *alter, int64_t lsn);
+	virtual void commit(struct alter_space *alter);
 };
 
 /*
@@ -1046,7 +1044,7 @@ DropIndex::alter(struct alter_space *alter)
 }
 
 void
-DropIndex::commit(struct alter_space *alter, int64_t /* signature */)
+DropIndex::commit(struct alter_space *alter)
 {
 	struct index *index = index_find_xc(alter->old_space,
 					    old_index_def->iid);
@@ -1177,7 +1175,7 @@ public:
 	struct index_def *new_index_def;
 	virtual void alter_def(struct alter_space *alter);
 	virtual void alter(struct alter_space *alter);
-	virtual void commit(struct alter_space *alter, int64_t lsn);
+	virtual void commit(struct alter_space *alter);
 	virtual ~CreateIndex();
 };
 
@@ -1225,11 +1223,11 @@ CreateIndex::alter(struct alter_space *alter)
 }
 
 void
-CreateIndex::commit(struct alter_space *alter, int64_t signature)
+CreateIndex::commit(struct alter_space *alter)
 {
 	struct index *new_index = index_find_xc(alter->new_space,
 						new_index_def->iid);
-	index_commit_create(new_index, signature);
+	index_commit_create(new_index);
 }
 
 CreateIndex::~CreateIndex()
@@ -1263,7 +1261,7 @@ public:
 	struct index_def *old_index_def;
 	virtual void alter_def(struct alter_space *alter);
 	virtual void alter(struct alter_space *alter);
-	virtual void commit(struct alter_space *alter, int64_t signature);
+	virtual void commit(struct alter_space *alter);
 	virtual ~RebuildIndex();
 };
 
@@ -1288,14 +1286,14 @@ RebuildIndex::alter(struct alter_space *alter)
 }
 
 void
-RebuildIndex::commit(struct alter_space *alter, int64_t signature)
+RebuildIndex::commit(struct alter_space *alter)
 {
 	struct index *old_index = space_index(alter->old_space,
 					      old_index_def->iid);
 	struct index *new_index = space_index(alter->new_space,
 					      new_index_def->iid);
 	index_commit_drop(old_index);
-	index_commit_create(new_index, signature);
+	index_commit_create(new_index);
 }
 
 RebuildIndex::~RebuildIndex()

@@ -536,7 +536,7 @@ index_build(struct index *index, struct index *pk)
 /* {{{ Virtual method stubs */
 
 void
-generic_index_commit_create(struct index *, int64_t)
+generic_index_commit_create(struct index *)
 {
 }
 
