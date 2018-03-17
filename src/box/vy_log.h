@@ -154,8 +154,11 @@ enum vy_log_record_type {
 	 */
 	VY_LOG_SNAPSHOT			= 11,
 	/**
-	 * Update truncate count of a vinyl index.
-	 * Requires vy_log_record::space_id, index_id, truncate_count.
+	 * Truncate an index.
+	 * Requires vy_log_record::space_id, index_id.
+	 *
+	 * This is basically a shortcut for DROP + CREATE.
+	 * Not used anymore, left for backward compatibility.
 	 */
 	VY_LOG_TRUNCATE_INDEX		= 12,
 
@@ -208,8 +211,6 @@ struct vy_log_record {
 	 * that uses this run.
 	 */
 	int64_t gc_lsn;
-	/** Index truncate count. */
-	int64_t truncate_count;
 	/** Link in vy_log::tx. */
 	struct stailq_entry in_tx;
 };
@@ -278,8 +279,6 @@ struct vy_index_recovery_info {
 	bool is_dropped;
 	/** LSN of the last index dump. */
 	int64_t dump_lsn;
-	/** Truncate count. */
-	int64_t truncate_count;
 	/**
 	 * Number of incarnations the index has had
 	 * since the last checkpoint.
@@ -669,20 +668,6 @@ vy_log_dump_index(uint32_t space_id, uint32_t index_id, int64_t dump_lsn)
 	record.space_id = space_id;
 	record.index_id = index_id;
 	record.dump_lsn = dump_lsn;
-	vy_log_write(&record);
-}
-
-/** Helper to log index truncation. */
-static inline void
-vy_log_truncate_index(uint32_t space_id, uint32_t index_id,
-		      int64_t truncate_count)
-{
-	struct vy_log_record record;
-	vy_log_record_init(&record);
-	record.type = VY_LOG_TRUNCATE_INDEX;
-	record.space_id = space_id;
-	record.index_id = index_id;
-	record.truncate_count = truncate_count;
 	vy_log_write(&record);
 }
 
