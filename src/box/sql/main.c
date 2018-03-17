@@ -81,25 +81,6 @@ sqlite3_sourceid(void)
 	return SQLITE_SOURCE_ID;
 }
 
-/* IMPLEMENTATION-OF: R-35210-63508 The sqlite3_libversion_number() function
- * returns an integer equal to SQLITE_VERSION_NUMBER.
- */
-int
-sqlite3_libversion_number(void)
-{
-	return SQLITE_VERSION_NUMBER;
-}
-
-/* IMPLEMENTATION-OF: R-20790-14025 The sqlite3_threadsafe() function returns
- * zero if and only if SQLite was compiled with mutexing code omitted due to
- * the SQLITE_THREADSAFE compile-time option being set to 0.
- */
-int
-sqlite3_threadsafe(void)
-{
-	return SQLITE_THREADSAFE;
-}
-
 #if !defined(SQLITE_OMIT_TRACE) && defined(SQLITE_ENABLE_IOTRACE)
 /*
  * If the following function pointer is not NULL and if
@@ -708,20 +689,6 @@ setupLookaside(sqlite3 * db, void *pBuf, int sz, int cnt)
 	return SQLITE_OK;
 }
 
-/*
- * Return the mutex associated with a database connection.
- */
-sqlite3_mutex *
-sqlite3_db_mutex(sqlite3 * db)
-{
-#ifdef SQLITE_ENABLE_API_ARMOR
-	if (!sqlite3SafetyCheckOk(db)) {
-		(void)SQLITE_MISUSE_BKPT;
-		return 0;
-	}
-#endif
-	return db->mutex;
-}
 
 /*
  * Free up as much memory as we can from the given database
@@ -738,89 +705,7 @@ sqlite3_db_release_memory(sqlite3 * db)
 	return SQLITE_OK;
 }
 
-/*
- * Flush any dirty pages in the pager-cache for any attached database
- * to disk.
- */
-int
-sqlite3_db_cacheflush(sqlite3 * db)
-{
-	int rc = SQLITE_OK;
-	int bSeenBusy = 0;
-	(void)db;
-#ifdef SQLITE_ENABLE_API_ARMOR
-	if (!sqlite3SafetyCheckOk(db))
-		return SQLITE_MISUSE_BKPT;
-#endif
-	return ((rc == SQLITE_OK && bSeenBusy) ? SQLITE_BUSY : rc);
-}
 
-/*
- * Configuration settings for an individual database connection
- */
-int
-sqlite3_db_config(sqlite3 * db, int op, ...)
-{
-	va_list ap;
-	int rc;
-	struct session *user_session = current_session();
-
-	va_start(ap, op);
-	switch (op) {
-	case SQLITE_DBCONFIG_LOOKASIDE:{
-			void *pBuf = va_arg(ap, void *);	/* IMP: R-26835-10964 */
-			int sz = va_arg(ap, int);	/* IMP: R-47871-25994 */
-			int cnt = va_arg(ap, int);	/* IMP: R-04460-53386 */
-			rc = setupLookaside(db, pBuf, sz, cnt);
-			break;
-		}
-	default:{
-			static const struct {
-				int op;	/* The opcode */
-				u32 mask;	/* Mask of the bit in sqlite3.flags to set/clear */
-			} aFlagOp[] = {
-				{
-				SQLITE_DBCONFIG_ENABLE_FKEY,
-					    SQLITE_ForeignKeys}, {
-				SQLITE_DBCONFIG_ENABLE_TRIGGER,
-					    SQLITE_EnableTrigger}, {
-			SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE,
-					    SQLITE_NoCkptOnClose},};
-			unsigned int i;
-			rc = SQLITE_ERROR;	/* IMP: R-42790-23372 */
-			for (i = 0; i < ArraySize(aFlagOp); i++) {
-				if (aFlagOp[i].op == op) {
-					int onoff = va_arg(ap, int);
-					int *pRes = va_arg(ap, int *);
-					uint32_t oldFlags =
-					    user_session->sql_flags;
-					if (onoff > 0) {
-						user_session->sql_flags |=
-						    aFlagOp[i].mask;
-					} else if (onoff == 0) {
-						user_session->sql_flags &=
-						    ~aFlagOp[i].mask;
-					}
-					if (oldFlags != user_session->sql_flags) {
-						sqlite3ExpirePreparedStatements
-						    (db);
-					}
-					if (pRes) {
-						*pRes =
-						    (user_session->
-						     sql_flags & aFlagOp[i].
-						     mask) != 0;
-					}
-					rc = SQLITE_OK;
-					break;
-				}
-			}
-			break;
-		}
-	}
-	va_end(ap);
-	return rc;
-}
 
 /*
  * Return the number of changes in the most recent call to sqlite3_exec().
@@ -955,11 +840,7 @@ sqlite3_close(sqlite3 * db)
 	return sqlite3Close(db, 0);
 }
 
-int
-sqlite3_close_v2(sqlite3 * db)
-{
-	return sqlite3Close(db, 1);
-}
+
 
 /*
  * Rollback all database files.  If tripCode is not SQLITE_OK, then
@@ -1375,35 +1256,7 @@ sqlite3_busy_handler(sqlite3 * db, int (*xBusy) (void *, int), void *pArg)
 	return SQLITE_OK;
 }
 
-#ifndef SQLITE_OMIT_PROGRESS_CALLBACK
-/*
- * This routine sets the progress callback for an Sqlite database to the
- * given callback function with the given argument. The progress callback will
- * be invoked every nOps opcodes.
- */
-void
-sqlite3_progress_handler(sqlite3 * db,
-			 int nOps, int (*xProgress) (void *), void *pArg)
-{
-#ifdef SQLITE_ENABLE_API_ARMOR
-	if (!sqlite3SafetyCheckOk(db)) {
-		(void)SQLITE_MISUSE_BKPT;
-		return;
-	}
-#endif
-	sqlite3_mutex_enter(db->mutex);
-	if (nOps > 0) {
-		db->xProgress = xProgress;
-		db->nProgressOps = (unsigned)nOps;
-		db->pProgressArg = pArg;
-	} else {
-		db->xProgress = 0;
-		db->nProgressOps = 0;
-		db->pProgressArg = 0;
-	}
-	sqlite3_mutex_leave(db->mutex);
-}
-#endif
+
 
 /*
  * This routine installs a default busy handler that waits for the
@@ -1516,24 +1369,8 @@ sqlite3CreateFunc(sqlite3 * db,
 	return SQLITE_OK;
 }
 
-/*
- * Create new user functions.
- */
-int
-sqlite3_create_function(sqlite3 * db,
-			const char *zFunc,
-			int nArg,
-			int flags,
-			void *p,
-			void (*xSFunc) (sqlite3_context *, int,
-					sqlite3_value **),
-			void (*xStep) (sqlite3_context *, int,
-				       sqlite3_value **),
-			void (*xFinal) (sqlite3_context *))
-{
-	return sqlite3_create_function_v2(db, zFunc, nArg, flags, p, xSFunc,
-					  xStep, xFinal, 0);
-}
+
+
 
 int
 sqlite3_create_function_v2(sqlite3 * db,
@@ -1583,59 +1420,6 @@ sqlite3_create_function_v2(sqlite3 * db,
 	return rc;
 }
 
-#ifndef SQLITE_OMIT_TRACE
-/* Register a trace callback using the version-2 interface.
- */
-int
-sqlite3_trace_v2(sqlite3 * db,		/* Trace this connection */
-		 unsigned mTrace,	/* Mask of events to be traced */
-		 int (*xTrace) (unsigned, void *, void *, void *),	/* Callback to invoke */
-		 void *pArg)		/* Context */
-{
-#ifdef SQLITE_ENABLE_API_ARMOR
-	if (!sqlite3SafetyCheckOk(db)) {
-		return SQLITE_MISUSE_BKPT;
-	}
-#endif
-	sqlite3_mutex_enter(db->mutex);
-	if (mTrace == 0)
-		xTrace = 0;
-	if (xTrace == 0)
-		mTrace = 0;
-	db->mTrace = mTrace;
-	db->xTrace = xTrace;
-	db->pTraceArg = pArg;
-	sqlite3_mutex_leave(db->mutex);
-	return SQLITE_OK;
-}
-
-#endif				/* SQLITE_OMIT_TRACE */
-
-/*
- * Register a function to be invoked when a transaction commits.
- * If the invoked function returns non-zero, then the commit becomes a
- * rollback.
- */
-void *
-sqlite3_commit_hook(sqlite3 * db,	/* Attach the hook to this database */
-		    int (*xCallback) (void *),	/* Function to invoke on each commit */
-		    void *pArg)		/* Argument to the function */
-{
-	void *pOld;
-
-#ifdef SQLITE_ENABLE_API_ARMOR
-	if (!sqlite3SafetyCheckOk(db)) {
-		(void)SQLITE_MISUSE_BKPT;
-		return 0;
-	}
-#endif
-	sqlite3_mutex_enter(db->mutex);
-	pOld = db->pCommitArg;
-	db->xCommitCallback = xCallback;
-	db->pCommitArg = pArg;
-	sqlite3_mutex_leave(db->mutex);
-	return pOld;
-}
 
 /*
  * Register a callback to be invoked each time a row is updated,
@@ -1663,30 +1447,6 @@ sqlite3_update_hook(sqlite3 * db,	/* Attach the hook to this database */
 	return pRet;
 }
 
-/*
- * Register a callback to be invoked each time a transaction is rolled
- * back by this database connection.
- */
-void *
-sqlite3_rollback_hook(sqlite3 * db,	/* Attach the hook to this database */
-		      void (*xCallback) (void *),	/* Callback function */
-		      void *pArg)	/* Argument to the function */
-{
-	void *pRet;
-
-#ifdef SQLITE_ENABLE_API_ARMOR
-	if (!sqlite3SafetyCheckOk(db)) {
-		(void)SQLITE_MISUSE_BKPT;
-		return 0;
-	}
-#endif
-	sqlite3_mutex_enter(db->mutex);
-	pRet = db->pRollbackArg;
-	db->xRollbackCallback = xCallback;
-	db->pRollbackArg = pArg;
-	sqlite3_mutex_leave(db->mutex);
-	return pRet;
-}
 
 #ifdef SQLITE_ENABLE_PREUPDATE_HOOK
 /*
@@ -1812,34 +1572,11 @@ sqlite3_errcode(sqlite3 * db)
 	return db->errCode & db->errMask;
 }
 
-int
-sqlite3_extended_errcode(sqlite3 * db)
-{
-	if (db && !sqlite3SafetyCheckSickOrOk(db)) {
-		return SQLITE_MISUSE_BKPT;
-	}
-	if (!db || db->mallocFailed) {
-		return SQLITE_NOMEM_BKPT;
-	}
-	return db->errCode;
-}
-
-int
-sqlite3_system_errno(sqlite3 * db)
-{
-	return db ? db->iSysErrno : 0;
-}
-
 /*
  * Return a string that describes the kind of error specified in the
  * argument.  For now, this simply calls the internal sqlite3ErrStr()
  * function.
  */
-const char *
-sqlite3_errstr(int rc)
-{
-	return sqlite3ErrStr(rc);
-}
 
 /*
  * This array defines hard upper bounds on limit values.  The
@@ -2483,14 +2220,6 @@ sqlite3_open(const char *zFilename, sqlite3 ** ppDb)
 			    SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
 }
 
-int
-sqlite3_open_v2(const char *filename,	/* Database filename (UTF-8) */
-		sqlite3 ** ppDb,	/* OUT: SQLite db handle */
-		int flags,		/* Flags */
-		const char *zVfs)	/* Name of VFS module to use */
-{
-	return openDatabase(filename, ppDb, (unsigned int)flags, zVfs);
-}
 
 /*
  * The following routines are substitutes for constants SQLITE_CORRUPT,
@@ -2548,24 +2277,6 @@ sqlite3IoerrnomemError(int lineno)
 }
 #endif
 
-/*
- * Sleep for a little while.  Return the amount of time slept.
- */
-int
-sqlite3_sleep(int ms)
-{
-	sqlite3_vfs *pVfs;
-	int rc;
-	pVfs = sqlite3_vfs_find(0);
-	if (pVfs == 0)
-		return 0;
-
-	/* This function works in milliseconds, but the underlying OsSleep()
-	 * API uses microseconds. Hence the 1000's.
-	 */
-	rc = (sqlite3OsSleep(pVfs, 1000 * ms) / 1000);
-	return rc;
-}
 
 /*
  * Enable or disable the extended result codes.
@@ -2944,64 +2655,3 @@ sqlite3_uri_boolean(const char *zFilename, const char *zParam, int bDflt)
 	return z ? sqlite3GetBoolean(z, bDflt) : bDflt;
 }
 
-/*
- * Return a 64-bit integer value for a query parameter.
- */
-sqlite3_int64
-sqlite3_uri_int64(const char *zFilename,	/* Filename as passed to xOpen */
-		  const char *zParam,	/* URI parameter sought */
-		  sqlite3_int64 bDflt)	/* return if parameter is missing */
-{
-	const char *z = sqlite3_uri_parameter(zFilename, zParam);
-	sqlite3_int64 v;
-	if (z && sqlite3DecOrHexToI64(z, &v) == SQLITE_OK) {
-		bDflt = v;
-	}
-	return bDflt;
-}
-
-
-#ifdef SQLITE_ENABLE_SNAPSHOT
-/*
- * Obtain a snapshot handle for the snapshot of database zDb currently
- * being read by handle db.
- */
-int
-sqlite3_snapshot_get(sqlite3 * db,
-		     const char *zDb, sqlite3_snapshot ** ppSnapshot)
-{
-	int rc = SQLITE_ERROR;
-	return rc;
-}
-
-/*
- * Open a read-transaction on the snapshot idendified by pSnapshot.
- */
-int
-sqlite3_snapshot_open(sqlite3 * db,
-		      const char *zDb, sqlite3_snapshot * pSnapshot)
-{
-	int rc = SQLITE_ERROR;
-	return rc;
-}
-
-/*
- * Recover as many snapshots as possible from the wal file associated with
- * schema zDb of database db.
- */
-int
-sqlite3_snapshot_recover(sqlite3 * db, const char *zDb)
-{
-	int rc = SQLITE_ERROR;
-	return rc;
-}
-
-/*
- * Free a snapshot handle obtained from sqlite3_snapshot_get().
- */
-void
-sqlite3_snapshot_free(sqlite3_snapshot * pSnapshot)
-{
-	sqlite3_free(pSnapshot);
-}
-#endif				/* SQLITE_ENABLE_SNAPSHOT */

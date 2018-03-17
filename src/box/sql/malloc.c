@@ -223,13 +223,6 @@ sqlite3_memory_used(void)
  * checked out since either the beginning of this process
  * or since the most recent reset.
  */
-sqlite3_int64
-sqlite3_memory_highwater(int resetFlag)
-{
-	sqlite3_int64 res, mx;
-	sqlite3_status64(SQLITE_STATUS_MEMORY_USED, &res, &mx, resetFlag);
-	return mx;
-}
 
 /*
  * Trigger the alarm
@@ -626,17 +619,6 @@ sqlite3Realloc(void *pOld, u64 nBytes)
  * The public interface to sqlite3Realloc.  Make sure that the memory
  * subsystem is initialized prior to invoking sqliteRealloc.
  */
-void *
-sqlite3_realloc(void *pOld, int n)
-{
-#ifndef SQLITE_OMIT_AUTOINIT
-	if (sqlite3_initialize())
-		return 0;
-#endif
-	if (n < 0)
-		n = 0;		/* IMP: R-26507-47431 */
-	return sqlite3Realloc(pOld, n);
-}
 
 void *
 sqlite3_realloc64(void *pOld, sqlite3_uint64 n)

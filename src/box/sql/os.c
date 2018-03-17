@@ -520,17 +520,3 @@ sqlite3_vfs_register(sqlite3_vfs * pVfs, int makeDflt)
 	return SQLITE_OK;
 }
 
-/*
- * Unregister a VFS so that it is no longer accessible.
- */
-int
-sqlite3_vfs_unregister(sqlite3_vfs * pVfs)
-{
-#if SQLITE_THREADSAFE
-	sqlite3_mutex *mutex = sqlite3MutexAlloc(SQLITE_MUTEX_STATIC_MASTER);
-#endif
-	sqlite3_mutex_enter(mutex);
-	vfsUnlink(pVfs);
-	sqlite3_mutex_leave(mutex);
-	return SQLITE_OK;
-}
